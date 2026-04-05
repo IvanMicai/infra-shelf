@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { dockerExec } from "../lib/docker";
 import { generatePassword } from "../lib/password";
 import type { RedisConfig } from "../lib/types";
+import { validateAppName } from "../lib/validate";
 
 const CONTAINER = "infra-redis";
 
@@ -21,6 +22,7 @@ async function adminCli(args: string[]): Promise<string> {
 }
 
 export async function provision(appName: string): Promise<RedisConfig> {
+  validateAppName(appName);
   const password = generatePassword();
   const prefix = `${appName}:`;
 
@@ -33,6 +35,8 @@ export async function provision(appName: string): Promise<RedisConfig> {
     `~${prefix}*`,
     "+@all",
   ]);
+
+  await adminCli(["ACL", "SAVE"]);
 
   return { username: appName, password, prefix };
 }
@@ -55,11 +59,13 @@ return cjson.encode(result)
 `.trim();
 
 export async function backup(appName: string, filePath: string): Promise<void> {
+  validateAppName(appName);
   const json = await adminCli(["EVAL", BACKUP_SCRIPT, "0", `${appName}:*`]);
   await Bun.write(filePath, json);
 }
 
 export async function restore(appName: string, filePath: string): Promise<void> {
+  validateAppName(appName);
   const raw = await Bun.file(filePath).text();
   const data = JSON.parse(raw) as [string, string, unknown][];
 
@@ -93,6 +99,7 @@ export async function restore(appName: string, filePath: string): Promise<void> 
 }
 
 export async function teardown(appName: string): Promise<void> {
+  validateAppName(appName);
   // Delete keys with app prefix
   await adminCli([
     "EVAL",
@@ -103,4 +110,5 @@ export async function teardown(appName: string): Promise<void> {
 
   // Remove the ACL user
   await adminCli(["ACL", "DELUSER", appName]);
+  await adminCli(["ACL", "SAVE"]);
 }

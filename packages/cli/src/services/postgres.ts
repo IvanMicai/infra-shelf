@@ -2,11 +2,13 @@ import { $ } from "bun";
 import { dockerExec } from "../lib/docker";
 import { generatePassword } from "../lib/password";
 import type { PostgresConfig } from "../lib/types";
+import { validateAppName } from "../lib/validate";
 
 const CONTAINER = "infra-postgres";
 const SUPER_USER = "postgres";
 
 export async function provision(appName: string): Promise<PostgresConfig> {
+  validateAppName(appName);
   const password = generatePassword();
 
   await dockerExec(CONTAINER, [
@@ -47,6 +49,7 @@ export async function provision(appName: string): Promise<PostgresConfig> {
 }
 
 export async function backup(appName: string, filePath: string): Promise<void> {
+  validateAppName(appName);
   const sql = await dockerExec(CONTAINER, [
     "pg_dump",
     "-U",
@@ -59,6 +62,7 @@ export async function backup(appName: string, filePath: string): Promise<void> {
 }
 
 export async function restore(appName: string, filePath: string): Promise<void> {
+  validateAppName(appName);
   const sql = await Bun.file(filePath).text();
   const proc = Bun.spawn(
     ["docker", "exec", "-i", CONTAINER, "psql", "-U", SUPER_USER, "-d", appName],
@@ -75,6 +79,7 @@ export async function restore(appName: string, filePath: string): Promise<void> 
 }
 
 export async function teardown(appName: string): Promise<void> {
+  validateAppName(appName);
   await dockerExec(CONTAINER, [
     "psql",
     "-U",

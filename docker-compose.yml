@@ -21,7 +21,7 @@ services:
 
   # ─── pgAdmin ───────────────────────────────────────────────
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:8
     container_name: infra-pgadmin
     restart: unless-stopped
     environment:
@@ -45,11 +45,13 @@ services:
     image: redis:7-alpine
     container_name: infra-redis
     restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: sh -c "test -f /data/users.acl || echo 'user default on >${REDIS_PASSWORD} ~* &* +@all' > /data/users.acl; redis-server --aclfile /data/users.acl"
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     volumes:
       - ${DATA_DIR:-./data}/redis:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,7 +60,7 @@ services:
 
   # ─── RedisInsight ──────────────────────────────────────────
   redisinsight:
-    image: redis/redisinsight:latest
+    image: redis/redisinsight:2.46
     container_name: infra-redisinsight
     restart: unless-stopped
     ports:

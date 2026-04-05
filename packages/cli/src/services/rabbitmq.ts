@@ -2,10 +2,12 @@ import { $ } from "bun";
 import { dockerExec } from "../lib/docker";
 import { generatePassword } from "../lib/password";
 import type { RabbitmqConfig } from "../lib/types";
+import { validateAppName } from "../lib/validate";
 
 const CONTAINER = "infra-rabbitmq";
 
 export async function provision(appName: string): Promise<RabbitmqConfig> {
+  validateAppName(appName);
   const password = generatePassword();
 
   await dockerExec(CONTAINER, ["rabbitmqctl", "add_vhost", appName]);
@@ -55,6 +57,7 @@ function filterByVhost(defs: Record<string, unknown>, vhost: string): Record<str
 }
 
 export async function backup(appName: string, filePath: string): Promise<void> {
+  validateAppName(appName);
   const allDefs = await dockerExec(CONTAINER, [
     "rabbitmqctl",
     "export_definitions",
@@ -82,6 +85,7 @@ export async function restore(_appName: string, filePath: string): Promise<void>
 }
 
 export async function teardown(appName: string): Promise<void> {
+  validateAppName(appName);
   await dockerExec(CONTAINER, ["rabbitmqctl", "delete_user", appName]);
   await dockerExec(CONTAINER, ["rabbitmqctl", "delete_vhost", appName]);
 }

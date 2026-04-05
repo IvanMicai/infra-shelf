@@ -2,11 +2,10 @@ import { isContainerRunning } from "../lib/docker";
 import { log, postgresEnv, redisEnv, rabbitmqEnv } from "../lib/output";
 import { loadRegistry, saveRegistry } from "../lib/registry";
 import type { ServiceName } from "../lib/types";
+import { validateAppName } from "../lib/validate";
 import * as postgres from "../services/postgres";
 import * as redis from "../services/redis";
 import * as rabbitmq from "../services/rabbitmq";
-
-const APP_NAME_REGEX = /^[a-z][a-z0-9-]*$/;
 
 const SERVICE_CONTAINERS: Record<ServiceName, string> = {
   postgres: "infra-postgres",
@@ -23,10 +22,10 @@ export async function setupCommand(
     process.exit(1);
   }
 
-  if (!APP_NAME_REGEX.test(appName)) {
-    log.error(
-      'Invalid app name. Use lowercase letters, numbers, and hyphens (e.g., "my-app").',
-    );
+  try {
+    validateAppName(appName);
+  } catch {
+    log.error('Invalid app name. Use lowercase letters, numbers, and hyphens (e.g., "my-app").');
     process.exit(1);
   }
 
