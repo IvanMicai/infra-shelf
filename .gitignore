@@ -4,6 +4,9 @@
 # CLI registry
 **/apps.json
 
+# Backups
+backups/
+
 # Dependencies
 node_modules/
 

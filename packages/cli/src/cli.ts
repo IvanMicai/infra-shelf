@@ -9,15 +9,21 @@ function printUsage(): void {
   Usage: bun shelf <command> [options]
 
   Commands:
-    setup <app>   Provision resources for an app
-    list          List all provisioned apps
-    remove <app>  Remove resources for an app
-    status        Show infrastructure container status
+    setup <app>    Provision resources for an app
+    list           List all provisioned apps
+    remove <app>   Remove resources for an app
+    backup <app>   Backup app data
+    restore <app>  Restore app data from backup
+    status         Show infrastructure container status
 
   Examples:
     bun shelf setup my-app -s postgres,redis,rabbitmq
     bun shelf list --json
     bun shelf remove my-app --force
+    bun shelf backup my-app
+    bun shelf backup --all
+    bun shelf restore my-app
+    bun shelf restore my-app --file backups/my-app/postgres_20260404T163000.sql
     bun shelf status
 `);
 }
@@ -74,6 +80,60 @@ switch (command) {
 
     const { removeCommand } = await import("./commands/remove");
     await removeCommand(positionals[0], values.force ?? false);
+    break;
+  }
+
+  case "backup": {
+    const { values, positionals } = parseArgs({
+      args: commandArgs,
+      allowPositionals: true,
+      options: {
+        services: { type: "string", short: "s" },
+        all: { type: "boolean", short: "a", default: false },
+      },
+    });
+
+    const serviceList = values.services?.split(",") ?? [];
+    const invalid = serviceList.filter((s) => s && !VALID_SERVICES.has(s));
+    if (invalid.length > 0) {
+      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq`);
+      process.exit(1);
+    }
+
+    const { backupCommand } = await import("./commands/backup");
+    await backupCommand(
+      positionals[0],
+      values.all ?? false,
+      serviceList.length ? (serviceList as ServiceName[]) : undefined,
+    );
+    break;
+  }
+
+  case "restore": {
+    const { values, positionals } = parseArgs({
+      args: commandArgs,
+      allowPositionals: true,
+      options: {
+        services: { type: "string", short: "s" },
+        file: { type: "string" },
+        force: { type: "boolean", short: "f", default: false },
+      },
+    });
+
+    const serviceList = values.services?.split(",") ?? [];
+    const invalid = serviceList.filter((s) => s && !VALID_SERVICES.has(s));
+    if (invalid.length > 0) {
+      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq`);
+      process.exit(1);
+    }
+
+    const { restoreCommand } = await import("./commands/restore");
+    await restoreCommand(
+      positionals[0],
+      serviceList.length ? (serviceList as ServiceName[]) : undefined,
+      values.file,
+      values.force ?? false,
+    );
     break;
   }
 
