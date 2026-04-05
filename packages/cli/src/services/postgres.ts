@@ -76,6 +76,25 @@ export async function restore(appName: string, filePath: string): Promise<void> 
     const stderr = await new Response(proc.stderr).text();
     throw new Error(`psql restore failed: ${stderr.trim()}`);
   }
+
+  await grantPermissions(appName);
+}
+
+async function grantPermissions(appName: string): Promise<void> {
+  const sql = `
+    DO $$ DECLARE r record;
+    BEGIN
+      FOR r IN SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname != 'information_schema'
+      LOOP
+        EXECUTE format('GRANT ALL ON SCHEMA %I TO %I', r.nspname, '${appName}');
+        EXECUTE format('GRANT ALL ON ALL TABLES IN SCHEMA %I TO %I', r.nspname, '${appName}');
+        EXECUTE format('GRANT ALL ON ALL SEQUENCES IN SCHEMA %I TO %I', r.nspname, '${appName}');
+        EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL ON TABLES TO %I', r.nspname, '${appName}');
+        EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL ON SEQUENCES TO %I', r.nspname, '${appName}');
+      END LOOP;
+    END $$;
+  `;
+  await dockerExec(CONTAINER, ["psql", "-U", SUPER_USER, "-d", appName, "-c", sql]);
 }
 
 export async function teardown(appName: string): Promise<void> {
