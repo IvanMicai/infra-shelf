@@ -3,9 +3,7 @@ import { log } from "../lib/output";
 
 const CONTAINERS = [
   { name: "infra-postgres", service: "PostgreSQL" },
-  { name: "infra-pgadmin", service: "pgAdmin" },
   { name: "infra-redis", service: "Redis" },
-  { name: "infra-redisinsight", service: "RedisInsight" },
   { name: "infra-rabbitmq", service: "RabbitMQ" },
 ];
 

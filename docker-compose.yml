@@ -19,27 +19,6 @@ services:
     networks:
       - infra
 
-  # ─── pgAdmin ───────────────────────────────────────────────
-  pgadmin:
-    image: dpage/pgadmin4:8
-    container_name: infra-pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    volumes:
-      - ${DATA_DIR:-./data}/pgadmin:/var/lib/pgadmin
-      - ./config/pgadmin/servers.json:/pgadmin4/servers.json:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - infra
-
   # ─── Redis ─────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
@@ -58,31 +37,14 @@ services:
     networks:
       - infra
 
-  # ─── RedisInsight ──────────────────────────────────────────
-  redisinsight:
-    image: redis/redisinsight:2.46
-    container_name: infra-redisinsight
-    restart: unless-stopped
-    ports:
-      - "${REDISINSIGHT_PORT:-5540}:5540"
-    volumes:
-      - ${DATA_DIR:-./data}/redisinsight:/data
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - infra
-
   # ─── RabbitMQ ──────────────────────────────────────────────
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3-alpine
     container_name: infra-rabbitmq
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
-    ports:
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     volumes:
       - ${DATA_DIR:-./data}/rabbitmq:/var/lib/rabbitmq
     healthcheck:

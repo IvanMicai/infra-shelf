@@ -1,8 +1,8 @@
 # infra-shelf
 
-Base de infraestrutura compartilhada para desenvolvimento local. Um único Docker Compose com todos os serviços necessários, acessíveis exclusivamente via rede Docker.
+Base de infraestrutura compartilhada para desenvolvimento local. Um único Docker Compose com os serviços core, acessíveis exclusivamente via rede Docker `infra-shelf`.
 
-Os serviços de dados (PostgreSQL, Redis, RabbitMQ) não expõem portas ao host — a conexão é feita apenas pela rede Docker `infra-shelf`. A CLI gerencia o provisionamento de credenciais isoladas por app.
+A CLI gerencia o provisionamento de credenciais isoladas por app — cada app recebe seu próprio database, user e senha.
 
 ## Quick Start
 
@@ -14,33 +14,27 @@ make up
 
 ## Serviços
 
-| Serviço      | Acesso                          | UI                      |
-|--------------|---------------------------------|-------------------------|
-| PostgreSQL   | `postgres:5432` (rede Docker)   | —                       |
-| pgAdmin      | —                               | http://localhost:5050   |
-| Redis        | `redis:6379` (rede Docker)      | —                       |
-| RedisInsight | —                               | http://localhost:5540   |
-| RabbitMQ     | `rabbitmq:5672` (rede Docker)   | http://localhost:15672  |
+| Serviço    | Acesso (rede Docker)  | Isolamento por app          |
+|------------|-----------------------|-----------------------------|
+| PostgreSQL | `postgres:5432`       | Database + user dedicado    |
+| Redis      | `redis:6379`          | ACL user + prefixo de chave |
+| RabbitMQ   | `rabbitmq:5672`       | Vhost + user dedicado       |
 
-## CLI — Provisionar Apps
-
-A CLI cria databases, users e vhosts isolados para cada projeto.
+## CLI
 
 ```bash
-# Provisionar um app com os serviços desejados
-bun shelf setup meu-app -s postgres,redis,rabbitmq
-
-# Listar apps provisionados
-bun shelf list
-
-# Remover um app
-bun shelf remove meu-app
-
-# Ver status dos containers
-bun shelf status
+bun shelf setup meu-app -s postgres,redis,rabbitmq   # Provisionar
+bun shelf list                                         # Listar apps
+bun shelf list --json                                  # Listar em JSON
+bun shelf backup meu-app                               # Backup
+bun shelf backup --all                                 # Backup de todos
+bun shelf restore meu-app                              # Restaurar último backup
+bun shelf restore meu-app --file backups/meu-app/postgres_20260405T0300.sql
+bun shelf remove meu-app                               # Remover
+bun shelf status                                       # Status dos containers
 ```
 
-### Exemplo de output
+### Exemplo de output do setup
 
 ```
 ✔ postgres provisioned
@@ -49,14 +43,29 @@ bun shelf status
 
 App "meu-app" ready!
 
-  PostgreSQL:
-    DATABASE_URL=postgres://meu-app:aBcDeFgH@postgres:5432/meu-app
+# === PostgreSQL ===
+DATABASE_URL=postgres://meu-app:aBcDeFgH@postgres:5432/meu-app
+DB_HOST=postgres
+DB_PORT=5432
+DB_USERNAME=meu-app
+DB_PASSWORD=aBcDeFgH
+DB_NAME=meu-app
 
-  Redis:
-    REDIS_URL=redis://redis:6379/1
+# === Redis ===
+REDIS_URL=redis://meu-app:xYzAbCdE@redis:6379/0
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_USERNAME=meu-app
+REDIS_PASSWORD=xYzAbCdE
+REDIS_PREFIX=meu-app:
 
-  RabbitMQ:
-    AMQP_URL=amqp://meu-app:xYzAbCdE@rabbitmq:5672/meu-app
+# === RabbitMQ ===
+AMQP_URL=amqp://meu-app:fGhIjKlM@rabbitmq:5672/meu-app
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=meu-app
+RABBITMQ_PASSWORD=fGhIjKlM
+RABBITMQ_VHOST=meu-app
 ```
 
 ## Conectar Outros Projetos
@@ -68,10 +77,8 @@ services:
   app:
     networks:
       - infra-shelf
-    environment:
-      DATABASE_URL: postgres://meu-app:SENHA@postgres:5432/meu-app
-      REDIS_URL: redis://redis:6379/1
-      AMQP_URL: amqp://meu-app:SENHA@rabbitmq:5672/meu-app
+    env_file:
+      - .env  # cole as variáveis geradas pelo setup aqui
 
 networks:
   infra-shelf:
@@ -90,5 +97,5 @@ make status    # Ver status dos serviços
 make logs      # Logs de todos os serviços
 make logs-postgres  # Logs de um serviço específico
 make network   # Ver containers na rede compartilhada
-make reset     # Parar e apagar todos os dados (volumes)
+make reset     # Parar e apagar todos os dados
 ```
