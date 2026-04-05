@@ -2,7 +2,7 @@
 .env
 
 # CLI registry
-packages/cli/apps.json
+**/apps.json
 
 # Dependencies
 node_modules/
