@@ -24,10 +24,11 @@ logs: ## Tail logs for all services
 logs-%: ## Tail logs for a specific service (e.g., make logs-postgres)
 	docker compose --env-file $(ENV_FILE) logs -f $*
 
-reset: ## Stop services and remove volumes (DESTROYS ALL DATA)
-	@echo "WARNING: This will destroy all data in all volumes."
+reset: ## Stop services and remove data (DESTROYS ALL DATA)
+	@echo "WARNING: This will destroy all data."
 	@read -p "Are you sure? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	docker compose --env-file $(ENV_FILE) down -v
+	docker compose --env-file $(ENV_FILE) down
+	@. ./$(ENV_FILE) 2>/dev/null; rm -rf $${DATA_DIR:-./data}
 
 clean: reset ## Alias for reset
 

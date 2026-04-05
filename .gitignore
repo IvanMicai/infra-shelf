@@ -4,6 +4,9 @@
 # CLI registry
 **/apps.json
 
+# Data volumes
+data/
+
 # Backups
 backups/
 
