@@ -1,0 +1,8 @@
+{
+  "name": "infra-shelf",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "shelf": "bun run packages/cli/src/cli.ts"
+  }
+}
