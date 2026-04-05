@@ -1,0 +1,22 @@
+# Environment variables
+.env
+
+# CLI registry
+packages/cli/apps.json
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
