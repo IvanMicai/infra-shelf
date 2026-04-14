@@ -35,15 +35,7 @@ export async function provision(appName: string): Promise<PostgresConfig> {
     `GRANT ALL PRIVILEGES ON DATABASE "${appName}" TO "${appName}";`,
   ]);
 
-  await dockerExec(CONTAINER, [
-    "psql",
-    "-U",
-    SUPER_USER,
-    "-d",
-    appName,
-    "-c",
-    `ALTER SCHEMA public OWNER TO "${appName}";`,
-  ]);
+  await grantPermissions(appName);
 
   return { database: appName, username: appName, password };
 }
@@ -86,11 +78,19 @@ async function grantPermissions(appName: string): Promise<void> {
     BEGIN
       FOR r IN SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' AND nspname != 'information_schema'
       LOOP
-        EXECUTE format('GRANT ALL ON SCHEMA %I TO %I', r.nspname, '${appName}');
+        EXECUTE format('ALTER SCHEMA %I OWNER TO %I', r.nspname, '${appName}');
         EXECUTE format('GRANT ALL ON ALL TABLES IN SCHEMA %I TO %I', r.nspname, '${appName}');
         EXECUTE format('GRANT ALL ON ALL SEQUENCES IN SCHEMA %I TO %I', r.nspname, '${appName}');
         EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL ON TABLES TO %I', r.nspname, '${appName}');
         EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL ON SEQUENCES TO %I', r.nspname, '${appName}');
+      END LOOP;
+      FOR r IN SELECT schemaname, tablename FROM pg_tables WHERE schemaname NOT LIKE 'pg_%' AND schemaname != 'information_schema'
+      LOOP
+        EXECUTE format('ALTER TABLE %I.%I OWNER TO %I', r.schemaname, r.tablename, '${appName}');
+      END LOOP;
+      FOR r IN SELECT sequence_schema, sequence_name FROM information_schema.sequences WHERE sequence_schema NOT LIKE 'pg_%' AND sequence_schema != 'information_schema'
+      LOOP
+        EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO %I', r.sequence_schema, r.sequence_name, '${appName}');
       END LOOP;
     END $$;
   `;
