@@ -16,6 +16,7 @@ const SERVICE_CONTAINERS: Record<ServiceName, string> = {
 export async function setupCommand(
   appName: string,
   services: ServiceName[],
+  options?: { fullAccess?: boolean },
 ): Promise<void> {
   if (!appName) {
     log.error("App name is required.");
@@ -67,7 +68,7 @@ export async function setupCommand(
           break;
         }
         case "redis": {
-          const config = await redis.provision(appName);
+          const config = await redis.provision(appName, { fullAccess: options?.fullAccess });
           registry.apps[appName].services.redis = config;
           results.push(redisEnv(config));
           break;

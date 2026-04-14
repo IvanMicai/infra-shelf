@@ -30,15 +30,18 @@ export function postgresEnv(config: PostgresConfig): string {
 
 export function redisEnv(config: RedisConfig): string {
   const url = `redis://${config.username}:${config.password}@redis:6379/0`;
-  return [
+  const lines = [
     `# === Redis ===`,
     `REDIS_URL=${url}`,
     `REDIS_HOST=redis`,
     `REDIS_PORT=6379`,
     `REDIS_USERNAME=${config.username}`,
     `REDIS_PASSWORD=${config.password}`,
-    `REDIS_PREFIX=${config.prefix}`,
-  ].join("\n");
+  ];
+  if (config.prefix) {
+    lines.push(`REDIS_PREFIX=${config.prefix}`);
+  }
+  return lines.join("\n");
 }
 
 export function rabbitmqEnv(config: RabbitmqConfig): string {
