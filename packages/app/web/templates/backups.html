@@ -1,0 +1,70 @@
+{{template "pageStart" .}}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Files</p>
+    <h1>Backups</h1>
+  </div>
+</header>
+
+{{template "flash" .}}
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>S3</h2>
+    {{if .S3Enabled}}
+    <form method="post" action="/backups/s3/sync">
+      <button class="button small" type="submit">Upload local backups</button>
+    </form>
+    {{end}}
+  </div>
+  <div class="info-row">
+    {{if .S3Enabled}}
+    <span class="pill ok">enabled</span>
+    <strong>{{.S3Destination}}</strong>
+    {{else}}
+    <span class="pill muted">not configured</span>
+    <strong>Set BACKUP_S3_BUCKET to upload backups after each run.</strong>
+    {{end}}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Run backup for all apps</h2>
+  </div>
+  <form method="post" action="/backups/run" class="inline-form">
+    <div class="checks">{{template "serviceChecks" .}}</div>
+    <button class="button primary" type="submit">Backup all</button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Backup files</h2>
+  </div>
+  <table>
+    <thead>
+      <tr><th>App</th><th>File</th><th>Service</th><th>Modified</th><th>Size</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Backups}}
+      <tr>
+        <td><a href="/apps/{{.App}}">{{.App}}</a></td>
+        <td>{{.Name}}</td>
+        <td>{{serviceLabel .Service}}</td>
+        <td>{{formatTime .Modified}}</td>
+        <td>{{formatBytes .Size}}</td>
+        <td class="actions">
+          <a class="button small" href="/backups/{{.App}}/{{.Name}}/download">Download</a>
+          <form method="post" action="/backups/{{.App}}/{{.Name}}/restore" onsubmit="return confirm('Restore this backup into {{.App}}?')">
+            <button class="button small" type="submit">Restore</button>
+          </form>
+        </td>
+      </tr>
+      {{else}}
+      <tr><td colspan="6" class="empty">No backups found.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{template "pageEnd" .}}

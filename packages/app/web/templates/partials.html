@@ -1,0 +1,50 @@
+{{define "nav"}}
+<aside class="sidebar">
+  <div class="brand">
+    <span class="brand-mark">IS</span>
+    <div>
+      <strong>infra-shelf</strong>
+      <small>{{.Config.Addr}}</small>
+    </div>
+  </div>
+  <nav>
+    <a href="/" class="{{if eq .Active "dashboard"}}active{{end}}">Dashboard</a>
+    <a href="/apps" class="{{if eq .Active "apps"}}active{{end}}">Apps</a>
+    <a href="/backups" class="{{if eq .Active "backups"}}active{{end}}">Backups</a>
+    <a href="/schedules" class="{{if eq .Active "schedules"}}active{{end}}">Schedules</a>
+  </nav>
+</aside>
+{{end}}
+
+{{define "flash"}}
+{{if .Flash.Message}}
+<div class="flash {{.Flash.Kind}}">{{.Flash.Message}}</div>
+{{end}}
+{{end}}
+
+{{define "serviceChecks"}}
+<label class="check"><input type="checkbox" name="services" value="postgres"> PostgreSQL</label>
+<label class="check"><input type="checkbox" name="services" value="redis"> Redis</label>
+<label class="check"><input type="checkbox" name="services" value="rabbitmq"> RabbitMQ</label>
+{{end}}
+
+{{define "pageStart"}}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} - infra-shelf</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+</head>
+<body>
+  {{template "nav" .}}
+  <main class="content">
+{{end}}
+
+{{define "pageEnd"}}
+  </main>
+</body>
+</html>
+{{end}}

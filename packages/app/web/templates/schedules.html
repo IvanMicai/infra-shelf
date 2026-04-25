@@ -1,0 +1,108 @@
+{{template "pageStart" .}}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Automation</p>
+    <h1>Schedules</h1>
+  </div>
+</header>
+
+{{template "flash" .}}
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Create schedule</h2>
+  </div>
+  <form method="post" action="/schedules" class="form-grid">
+    <label>
+      Target
+      <select name="app_name">
+        <option value="*">All apps</option>
+        {{range .Apps}}<option value="{{.Name}}">{{.Name}}</option>{{end}}
+      </select>
+    </label>
+    <label>
+      Cron
+      <input name="cron_expr" value="0 10 * * 5" required>
+    </label>
+    <label>
+      Timezone
+      <input name="timezone" value="{{.Config.Timezone}}" required>
+    </label>
+    <label>
+      Keep days
+      <input name="retention_days" type="number" min="0" value="30">
+    </label>
+    <label>
+      Keep files
+      <input name="retention_count" type="number" min="0" value="0">
+    </label>
+    <fieldset>
+      <legend>Services</legend>
+      <div class="checks">{{template "serviceChecks" .}}</div>
+    </fieldset>
+    <div class="form-actions">
+      <button class="button primary" type="submit">Create schedule</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Active schedules</h2>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Target</th><th>Services</th><th>Cron</th><th>Retention</th><th>Next run</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Schedules}}
+      <tr>
+        <td>{{displayTarget .AppName}}</td>
+        <td>{{displayServices .Services}}</td>
+        <td><code>{{.CronExpr}}</code> <span class="muted">{{.Timezone}}</span></td>
+        <td>{{displayRetention .RetentionDays .RetentionCount}}</td>
+        <td>{{formatTime .NextRunAt}}</td>
+        <td>
+          {{if .Enabled}}<span class="pill ok">enabled</span>{{else}}<span class="pill muted">paused</span>{{end}}
+          {{if .LastStatus}}<span class="pill {{statusClass .LastStatus}}">{{.LastStatus}}</span>{{end}}
+        </td>
+        <td class="actions">
+          <form method="post" action="/schedules/{{.ID}}/run"><button class="button small" type="submit">Run</button></form>
+          {{if .Enabled}}
+          <form method="post" action="/schedules/{{.ID}}/pause"><button class="button small" type="submit">Pause</button></form>
+          {{else}}
+          <form method="post" action="/schedules/{{.ID}}/resume"><button class="button small" type="submit">Resume</button></form>
+          {{end}}
+          <form method="post" action="/schedules/{{.ID}}/delete" onsubmit="return confirm('Delete this schedule?')"><button class="button small danger" type="submit">Delete</button></form>
+        </td>
+      </tr>
+      {{else}}
+      <tr><td colspan="7" class="empty">No schedules configured.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Run history</h2>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Target</th><th>Services</th><th>Status</th><th>Started</th></tr>
+    </thead>
+    <tbody>
+      {{range .Runs}}
+      <tr>
+        <td>{{displayTarget .AppName}}</td>
+        <td>{{displayServices .Services}}</td>
+        <td><span class="pill {{statusClass .Status}}">{{.Status}}</span></td>
+        <td>{{formatTime .StartedAt}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="4" class="empty">No runs yet.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{template "pageEnd" .}}

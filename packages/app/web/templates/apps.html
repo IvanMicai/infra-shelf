@@ -1,0 +1,61 @@
+{{template "pageStart" .}}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Provisioning</p>
+    <h1>Apps</h1>
+  </div>
+</header>
+
+{{template "flash" .}}
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Infrastructure</h2>
+    <form method="post" action="/infra/start">
+      <button class="button small" type="submit">Start infrastructure</button>
+    </form>
+  </div>
+  {{template "status_grid.html" .}}
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Create app</h2>
+  </div>
+  <form method="post" action="/apps" class="form-grid">
+    <label>
+      App name
+      <input name="app_name" placeholder="my-app" required pattern="[a-z][a-z0-9-]*">
+    </label>
+    <fieldset>
+      <legend>Services</legend>
+      <div class="checks">{{template "serviceChecks" .}}</div>
+    </fieldset>
+    <div class="form-actions">
+      <button class="button primary" type="submit">Provision</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Provisioned apps</h2>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Services</th><th>Created</th></tr>
+    </thead>
+    <tbody>
+      {{range .Apps}}
+      <tr>
+        <td><a href="/apps/{{.Name}}">{{.Name}}</a></td>
+        <td>{{join .ServiceNames ", "}}</td>
+        <td>{{formatTime .CreatedAtTime}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="3" class="empty">No apps provisioned.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+{{template "pageEnd" .}}

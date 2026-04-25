@@ -1,0 +1,84 @@
+{{template "pageStart" .}}
+<header class="page-header">
+  <div>
+    <p class="eyebrow">Local infrastructure</p>
+    <h1>Dashboard</h1>
+  </div>
+  <a class="button primary" href="/apps">New app</a>
+</header>
+
+{{template "flash" .}}
+
+<section class="metrics">
+  <div class="metric">
+    <span>Apps</span>
+    <strong>{{len .Apps}}</strong>
+  </div>
+  <div class="metric">
+    <span>Backups</span>
+    <strong>{{.BackupCount}}</strong>
+  </div>
+  <div class="metric">
+    <span>Schedules</span>
+    <strong>{{.ScheduleCount}}</strong>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Services</h2>
+    <form method="post" action="/infra/start">
+      <button class="button small" type="submit">Start infrastructure</button>
+    </form>
+  </div>
+  {{template "status_grid.html" .}}
+</section>
+
+<div class="split">
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Recent runs</h2>
+      <a href="/schedules">View all</a>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Target</th><th>Status</th><th>Started</th></tr>
+      </thead>
+      <tbody>
+        {{range .Runs}}
+        <tr>
+          <td>{{displayTarget .AppName}} <span class="muted">{{displayServices .Services}}</span></td>
+          <td><span class="pill {{statusClass .Status}}">{{.Status}}</span></td>
+          <td>{{formatTime .StartedAt}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="3" class="empty">No runs yet.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Recent backups</h2>
+      <a href="/backups">View all</a>
+    </div>
+    <table>
+      <thead>
+        <tr><th>File</th><th>Service</th><th>Size</th></tr>
+      </thead>
+      <tbody>
+        {{range .Backups}}
+        <tr>
+          <td><a href="/backups/{{.App}}/{{.Name}}/download">{{.App}}/{{.Name}}</a></td>
+          <td>{{serviceLabel .Service}}</td>
+          <td>{{formatBytes .Size}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="3" class="empty">No backups found.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </section>
+</div>
+{{template "pageEnd" .}}

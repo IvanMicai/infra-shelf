@@ -1,0 +1,85 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/ivan/infra-shelf/packages/app/internal/backupservice"
+	"github.com/ivan/infra-shelf/packages/app/internal/config"
+	"github.com/ivan/infra-shelf/packages/app/internal/runner"
+	"github.com/ivan/infra-shelf/packages/app/internal/s3backup"
+	"github.com/ivan/infra-shelf/packages/app/internal/scheduler"
+	"github.com/ivan/infra-shelf/packages/app/internal/server"
+)
+
+func main() {
+	logger := log.New(os.Stdout, "infra-shelf-app ", log.LstdFlags)
+
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Fatalf("load config: %v", err)
+	}
+
+	store, err := scheduler.OpenStore(cfg.DatabasePath)
+	if err != nil {
+		logger.Fatalf("open sqlite store: %v", err)
+	}
+	defer store.Close()
+
+	cli := runner.NewCLI(cfg.RootDir, cfg.BunPath)
+	s3Client, err := s3backup.New(context.Background(), cfg.S3)
+	if err != nil {
+		logger.Fatalf("create s3 client: %v", err)
+	}
+	backups := backupservice.New(cli, cfg.BackupsDir, s3Client, logger)
+	if backups.S3Enabled() {
+		logger.Printf("s3 backup uploads enabled: %s", backups.S3Destination())
+	}
+
+	manager, err := scheduler.NewManager(store, backups, cfg.Timezone, logger)
+	if err != nil {
+		logger.Fatalf("create scheduler: %v", err)
+	}
+	if err := manager.Reload(context.Background()); err != nil {
+		logger.Fatalf("load schedules: %v", err)
+	}
+	manager.Start()
+	defer manager.Stop(context.Background())
+
+	handler, err := server.New(cfg, cli, backups, store, manager, logger)
+	if err != nil {
+		logger.Fatalf("create server: %v", err)
+	}
+
+	httpServer := &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           handler.Routes(),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		logger.Printf("listening on http://%s", cfg.Addr)
+		if cfg.UsingDefaultPassword {
+			logger.Printf("using default basic auth credentials admin/admin; set APP_USERNAME and APP_PASSWORD")
+		}
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Fatalf("listen: %v", err)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(ctx); err != nil {
+		logger.Printf("shutdown: %v", err)
+	}
+}
