@@ -15,6 +15,7 @@ function printUsage(): void {
     backup <app>   Backup app data
     restore <app>  Restore app data from backup
     status         Show infrastructure container status
+    registry       Registry maintenance
 
   Examples:
     bun shelf setup my-app -s postgres,redis,rabbitmq
@@ -26,6 +27,7 @@ function printUsage(): void {
     bun shelf restore my-app
     bun shelf restore my-app --file backups/my-app/postgres_20260404T163000.sql
     bun shelf status
+    INFRA_SHELF_SECRET=... bun shelf registry encrypt
 `);
 }
 
@@ -143,6 +145,24 @@ switch (command) {
   case "status": {
     const { statusCommand } = await import("./commands/status");
     await statusCommand();
+    break;
+  }
+
+  case "registry": {
+    const subcommand = commandArgs[0];
+    if (subcommand !== "encrypt") {
+      log.error("Unknown registry command. Use: bun shelf registry encrypt");
+      process.exit(1);
+    }
+
+    const { encryptRegistryFile } = await import("./lib/registry");
+    try {
+      await encryptRegistryFile();
+      log.success("Registry encrypted.");
+    } catch (err) {
+      log.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
     break;
   }
 

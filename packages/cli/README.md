@@ -235,3 +235,18 @@ Infrastructure Status
 | 🟢 | Container rodando |
 | 🔴 | Container parado/com erro |
 | ⏹ | Container nao criado |
+
+---
+
+### `registry encrypt`
+
+Criptografa o arquivo `apps.json` usando `INFRA_SHELF_SECRET`.
+
+```bash
+secret="$(openssl rand -base64 32)"
+printf '\nINFRA_SHELF_SECRET=%s\n' "$secret" >> .env
+bun shelf registry encrypt
+```
+
+Depois disso, a CLI continua lendo e salvando o registry criptografado enquanto
+o mesmo secret estiver disponivel no ambiente ou no `.env`.

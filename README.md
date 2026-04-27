@@ -34,6 +34,89 @@ bun shelf remove meu-app                               # Remover
 bun shelf status                                       # Status dos containers
 ```
 
+## Interface Web
+
+A interface grafica fica em `packages/app` e usa Go templates + HTMX. Ela le o
+registry atual da CLI, chama a CLI para provisionar/remover/backup/restore e usa
+SQLite para salvar schedules e historico de execucoes.
+Na pagina de cada app, as credenciais ficam ocultas ate acionar o botao
+`Reveal credentials`.
+
+```bash
+make app
+```
+
+Por padrao ela sobe em `http://127.0.0.1:8080` com Basic Auth
+`admin` / `admin`. Configure `APP_USERNAME` e `APP_PASSWORD` antes de expor fora
+da maquina local.
+
+Variaveis uteis:
+
+```bash
+APP_ADDR=127.0.0.1:8080
+APP_USERNAME=admin
+APP_PASSWORD=admin
+APP_TIMEZONE=America/Sao_Paulo
+APP_DATABASE_PATH=./data/app/infra-shelf-app.db
+INFRA_SHELF_SECRET=gere-um-valor-longo-com-openssl-rand-base64-32
+BACKUP_S3_BUCKET=meu-bucket
+BACKUP_S3_REGION=us-east-1
+BACKUP_S3_PREFIX=infra-shelf/backups
+```
+
+### Criptografia do registry
+
+Por padrao, a CLI mantem compatibilidade com o registry antigo em texto claro.
+Para salvar credenciais criptografadas, defina `INFRA_SHELF_SECRET` no `.env`
+local e rode:
+
+```bash
+secret="$(openssl rand -base64 32)"
+printf '\nINFRA_SHELF_SECRET=%s\n' "$secret" >> .env
+bun shelf registry encrypt
+```
+
+Guarde esse secret: sem ele, a CLI e a interface web nao conseguem revelar as
+credenciais ja salvas no registry criptografado. Novas alteracoes no registry
+continuam sendo salvas criptografadas enquanto esse secret estiver definido.
+
+### Backups no S3
+
+A interface web pode enviar backups locais para S3 automaticamente depois de
+cada backup manual ou agendado. Configure no `.env`:
+
+```bash
+BACKUP_S3_BUCKET=meu-bucket
+BACKUP_S3_REGION=us-east-1
+BACKUP_S3_PREFIX=infra-shelf/backups
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+Se voce usa MinIO, LocalStack ou outro storage compativel com S3, tambem pode
+usar:
+
+```bash
+BACKUP_S3_ENDPOINT=http://localhost:9000
+BACKUP_S3_FORCE_PATH_STYLE=true
+```
+
+Com `BACKUP_S3_BUCKET` configurado, backups novos sao enviados para
+`s3://bucket/prefix/{app}/{arquivo}`. A tela de Backups tambem tem uma acao para
+enviar backups locais ja existentes.
+
+### Rotacao de backups
+
+Os schedules da interface web permitem configurar retencao por app:
+
+- `Keep days`: remove backups mais antigos que esse numero de dias.
+- `Keep files`: mantem no maximo essa quantidade de arquivos por app/servico.
+- `0`: desativa aquela regra.
+
+A rotacao roda depois de backups agendados concluidos com sucesso. Quando S3
+esta configurado, a interface tambem tenta remover do bucket os objetos
+correspondentes aos arquivos locais apagados.
+
 ### Exemplo de output do setup
 
 ```

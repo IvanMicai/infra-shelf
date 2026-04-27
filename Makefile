@@ -1,4 +1,4 @@
-.PHONY: up down restart status logs logs-% reset clean network help
+.PHONY: up down restart status logs logs-% reset clean network app help
 
 ENV_FILE ?= .env
 
@@ -38,3 +38,6 @@ network: ## Show the shared network name and connected containers
 		docker network inspect $${INFRA_NETWORK_NAME:-infra-shelf} \
 			--format '{{range .Containers}}  - {{.Name}}{{"\n"}}{{end}}' 2>/dev/null \
 			|| echo "  (network not created yet — run 'make up' first)"
+
+app: ## Start the web interface
+	cd packages/app && go run ./cmd/infra-shelf-app
