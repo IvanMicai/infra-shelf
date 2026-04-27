@@ -18,6 +18,7 @@ function printUsage(): void {
 
   Examples:
     bun shelf setup my-app -s postgres,redis,rabbitmq
+    bun shelf setup my-app -s redis --full-access
     bun shelf list --json
     bun shelf remove my-app --force
     bun shelf backup my-app
@@ -39,11 +40,13 @@ switch (command) {
       allowPositionals: true,
       options: {
         services: { type: "string", short: "s" },
+        "full-access": { type: "boolean", default: false },
       },
     });
 
     const appName = positionals[0];
     const serviceList = values.services?.split(",") ?? [];
+    const fullAccess = values["full-access"] ?? false;
 
     const invalid = serviceList.filter((s) => !VALID_SERVICES.has(s));
     if (invalid.length > 0) {
@@ -52,7 +55,7 @@ switch (command) {
     }
 
     const { setupCommand } = await import("./commands/setup");
-    await setupCommand(appName, serviceList as ServiceName[]);
+    await setupCommand(appName, serviceList as ServiceName[], { fullAccess });
     break;
   }
 

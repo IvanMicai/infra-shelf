@@ -21,10 +21,14 @@ async function adminCli(args: string[]): Promise<string> {
   return dockerExec(CONTAINER, ["redis-cli", ...authArgs, ...args]);
 }
 
-export async function provision(appName: string): Promise<RedisConfig> {
+export async function provision(
+  appName: string,
+  options?: { fullAccess?: boolean },
+): Promise<RedisConfig> {
   validateAppName(appName);
   const password = generatePassword();
-  const prefix = `${appName}:`;
+  const prefix = options?.fullAccess ? "" : `${appName}:`;
+  const keyPattern = options?.fullAccess ? "~*" : `~${prefix}*`;
 
   await adminCli([
     "ACL",
@@ -32,7 +36,7 @@ export async function provision(appName: string): Promise<RedisConfig> {
     appName,
     "on",
     `>${password}`,
-    `~${prefix}*`,
+    keyPattern,
     "+@all",
   ]);
 
