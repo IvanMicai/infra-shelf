@@ -76,6 +76,19 @@ func (s *Service) UploadAll(ctx context.Context) ([]s3backup.UploadedFile, error
 	return s.s3.UploadMany(ctx, files)
 }
 
+func (s *Service) DeleteFile(ctx context.Context, app, name string) (backup.File, error) {
+	file, err := backup.Delete(s.backupsDir, app, name)
+	if err != nil {
+		return backup.File{}, err
+	}
+	if s.s3 != nil && s.s3.Enabled() {
+		if err := s.s3.DeleteMany(ctx, []backup.File{file}); err != nil {
+			return file, err
+		}
+	}
+	return file, nil
+}
+
 func (s *Service) S3Enabled() bool {
 	return s.s3 != nil && s.s3.Enabled()
 }

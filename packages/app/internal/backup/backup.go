@@ -172,6 +172,28 @@ func Prune(dir string, options PruneOptions) ([]File, error) {
 	return deleted, nil
 }
 
+func Delete(dir, app, name string) (File, error) {
+	path, err := Resolve(dir, app, name)
+	if err != nil {
+		return File{}, err
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return File{}, err
+	}
+	if err := os.Remove(path); err != nil {
+		return File{}, err
+	}
+	return File{
+		App:      app,
+		Service:  DetectService(name),
+		Name:     name,
+		Path:     path,
+		Size:     info.Size(),
+		Modified: info.ModTime(),
+	}, nil
+}
+
 func Resolve(dir, app, name string) (string, error) {
 	if !safeNamePattern.MatchString(app) {
 		return "", fmt.Errorf("invalid app %q", app)

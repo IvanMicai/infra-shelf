@@ -57,6 +57,9 @@
           <form method="post" action="/backups/{{.App}}/{{.Name}}/restore" onsubmit="return confirm('Restore this backup into {{.App}}?')">
             <button class="button small" type="submit">Restore</button>
           </form>
+          <form method="post" action="/backups/{{.App}}/{{.Name}}/delete" onsubmit="return confirm('Delete {{.Name}}? This cannot be undone.')">
+            <button class="button small danger" type="submit">Delete</button>
+          </form>
         </td>
       </tr>
       {{else}}

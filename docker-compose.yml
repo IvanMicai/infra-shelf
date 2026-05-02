@@ -56,6 +56,43 @@ services:
     networks:
       - infra
 
+  # ─── Web app ───────────────────────────────────────────────
+  app:
+    build:
+      context: ./packages/app
+      dockerfile: Dockerfile
+    container_name: infra-shelf-app
+    restart: unless-stopped
+    environment:
+      APP_ADDR: 0.0.0.0:8080
+      APP_USERNAME: ${APP_USERNAME:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:-admin}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Sao_Paulo}
+      INFRA_SHELF_ROOT: /workspace
+      APP_DATABASE_PATH: /workspace/data/app/infra-shelf-app.db
+      INFRA_SHELF_BACKUPS_DIR: /workspace/backups
+      INFRA_SHELF_REGISTRY_PATH: /workspace/packages/cli/src/apps.json
+      INFRA_SHELF_SECRET: ${INFRA_SHELF_SECRET:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-us-east-1}
+      BACKUP_S3_PREFIX: ${BACKUP_S3_PREFIX:-infra-shelf/backups}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_FORCE_PATH_STYLE: ${BACKUP_S3_FORCE_PATH_STYLE:-false}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+    volumes:
+      - ./:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - infra
+
 # ─── Network ──────────────────────────────────────────────
 networks:
   infra:

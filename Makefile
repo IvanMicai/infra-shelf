@@ -1,4 +1,4 @@
-.PHONY: up down restart status logs logs-% reset clean network app help
+.PHONY: up down restart status logs logs-% reset clean network app dev app-build app-logs help
 
 ENV_FILE ?= .env
 
@@ -39,5 +39,13 @@ network: ## Show the shared network name and connected containers
 			--format '{{range .Containers}}  - {{.Name}}{{"\n"}}{{end}}' 2>/dev/null \
 			|| echo "  (network not created yet — run 'make up' first)"
 
-app: ## Start the web interface
-	cd packages/app && go run ./cmd/infra-shelf-app
+app: ## Start the web interface (docker compose, builds if needed)
+	docker compose --env-file $(ENV_FILE) up -d --build app
+
+dev: app ## Alias for `make app` — start the full stack including the web UI
+
+app-build: ## Rebuild the web interface image
+	docker compose --env-file $(ENV_FILE) build app
+
+app-logs: ## Tail web interface logs
+	docker compose --env-file $(ENV_FILE) logs -f app

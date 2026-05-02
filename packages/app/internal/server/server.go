@@ -111,6 +111,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /backups/s3/sync", s.syncBackupsToS3)
 	mux.HandleFunc("GET /backups/{app}/{file}/download", s.downloadBackup)
 	mux.HandleFunc("POST /backups/{app}/{file}/restore", s.restoreBackup)
+	mux.HandleFunc("POST /backups/{app}/{file}/delete", s.deleteBackup)
 
 	mux.HandleFunc("GET /schedules", s.schedulesPage)
 	mux.HandleFunc("POST /schedules", s.createSchedule)
@@ -121,7 +122,23 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("GET /fragments/status", s.statusFragment)
 
+	mux.HandleFunc("GET /logout", s.logout)
+
 	return auth.Basic(s.cfg.Username, s.cfg.Password, secureHeaders(mux))
+}
+
+func (s *Server) logout(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("WWW-Authenticate", `Basic realm="infra-shelf-logout"`)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusUnauthorized)
+	_, _ = w.Write([]byte(`<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Logged out - infra-shelf</title>
+<link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="content"><section class="panel">
+<h1>Logged out</h1>
+<p>Voce saiu da sessao do infra-shelf.</p>
+<p><a class="button primary" href="/">Sign in again</a></p>
+</section></main></body></html>`))
 }
 
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
@@ -371,6 +388,20 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.redirect(w, r, target, "success", "backup restored")
+}
+
+func (s *Server) deleteBackup(w http.ResponseWriter, r *http.Request) {
+	appName := r.PathValue("app")
+	fileName := r.PathValue("file")
+	redirect := r.Referer()
+	if redirect == "" {
+		redirect = "/backups"
+	}
+	if _, err := s.backups.DeleteFile(r.Context(), appName, fileName); err != nil {
+		s.redirect(w, r, redirect, "error", err.Error())
+		return
+	}
+	s.redirect(w, r, redirect, "success", fmt.Sprintf("deleted %s", fileName))
 }
 
 func (s *Server) schedulesPage(w http.ResponseWriter, r *http.Request) {

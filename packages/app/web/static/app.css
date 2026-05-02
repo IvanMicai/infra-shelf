@@ -46,6 +46,8 @@ a:hover {
   color: #ffffff;
   position: sticky;
   top: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .brand {
@@ -92,6 +94,18 @@ a:hover {
   background: #334045;
   color: #ffffff;
   text-decoration: none;
+}
+
+.sidebar .logout {
+  margin-top: auto;
+  padding-top: 18px;
+  color: #b9c2c6;
+  font-size: 0.92rem;
+}
+
+.sidebar .logout:hover {
+  background: transparent;
+  color: #ff6b6b;
 }
 
 .content {
