@@ -1,16 +1,18 @@
 import { isContainerRunning } from "../lib/docker";
-import { log, postgresEnv, redisEnv, rabbitmqEnv } from "../lib/output";
+import { log, postgresEnv, redisEnv, rabbitmqEnv, aistorEnv } from "../lib/output";
 import { loadRegistry, saveRegistry } from "../lib/registry";
 import type { ServiceName } from "../lib/types";
 import { validateAppName } from "../lib/validate";
 import * as postgres from "../services/postgres";
 import * as redis from "../services/redis";
 import * as rabbitmq from "../services/rabbitmq";
+import * as aistor from "../services/aistor";
 
 const SERVICE_CONTAINERS: Record<ServiceName, string> = {
   postgres: "infra-postgres",
   redis: "infra-redis",
   rabbitmq: "infra-rabbitmq",
+  aistor: "infra-aistor",
 };
 
 export async function setupCommand(
@@ -30,7 +32,7 @@ export async function setupCommand(
   }
 
   if (services.length === 0) {
-    log.error("At least one service is required. Use -s postgres,redis,rabbitmq");
+    log.error("At least one service is required. Use -s postgres,redis,rabbitmq,aistor");
     process.exit(1);
   }
 
@@ -76,6 +78,12 @@ export async function setupCommand(
           const config = await rabbitmq.provision(appName);
           registry.apps[appName].services.rabbitmq = config;
           results.push(rabbitmqEnv(config));
+          break;
+        }
+        case "aistor": {
+          const config = await aistor.provision(appName);
+          registry.apps[appName].services.aistor = config;
+          results.push(aistorEnv(config));
           break;
         }
       }

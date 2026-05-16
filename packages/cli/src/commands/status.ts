@@ -5,6 +5,7 @@ const CONTAINERS = [
   { name: "infra-postgres", service: "PostgreSQL" },
   { name: "infra-redis", service: "Redis" },
   { name: "infra-rabbitmq", service: "RabbitMQ" },
+  { name: "infra-aistor", service: "AIStor" },
 ];
 
 export async function statusCommand(): Promise<void> {

@@ -7,6 +7,7 @@ import type { ServiceName } from "../lib/types";
 import * as postgres from "../services/postgres";
 import * as redis from "../services/redis";
 import * as rabbitmq from "../services/rabbitmq";
+import * as aistor from "../services/aistor";
 
 const BACKUPS_DIR = resolve(process.cwd(), "backups");
 
@@ -14,12 +15,14 @@ const SERVICE_CONTAINERS: Record<ServiceName, string> = {
   postgres: "infra-postgres",
   redis: "infra-redis",
   rabbitmq: "infra-rabbitmq",
+  aistor: "infra-aistor",
 };
 
 const SERVICE_EXT: Record<ServiceName, string> = {
   postgres: "sql",
   redis: "json",
   rabbitmq: "json",
+  aistor: "tar",
 };
 
 function timestamp(): string {
@@ -73,6 +76,9 @@ async function backupApp(
           break;
         case "rabbitmq":
           await rabbitmq.backup(appName, filePath);
+          break;
+        case "aistor":
+          await aistor.backup(appName, filePath);
           break;
       }
       log.success(`${service} -> ${fileName}`);

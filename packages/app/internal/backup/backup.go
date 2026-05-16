@@ -231,6 +231,8 @@ func DetectService(name string) string {
 		return "redis"
 	case strings.HasPrefix(name, "rabbitmq_") && strings.HasSuffix(name, ".json"):
 		return "rabbitmq"
+	case strings.HasPrefix(name, "aistor_") && strings.HasSuffix(name, ".tar"):
+		return "aistor"
 	default:
 		return ""
 	}

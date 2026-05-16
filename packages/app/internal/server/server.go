@@ -625,6 +625,7 @@ func (s *Server) requireServicesRunning(ctx context.Context, services []string) 
 		"postgres": "infra-postgres",
 		"redis":    "infra-redis",
 		"rabbitmq": "infra-rabbitmq",
+		"aistor":   "infra-aistor",
 	}
 	statusByContainer := map[string]docker.Status{}
 	for _, status := range docker.ListStatus(ctx) {
@@ -749,6 +750,8 @@ func serviceLabel(service string) string {
 		return "Redis"
 	case "rabbitmq":
 		return "RabbitMQ"
+	case "aistor":
+		return "AIStor"
 	default:
 		return service
 	}

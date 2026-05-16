@@ -25,12 +25,14 @@ const (
 	Postgres ServiceName = "postgres"
 	Redis    ServiceName = "redis"
 	RabbitMQ ServiceName = "rabbitmq"
+	AIStor   ServiceName = "aistor"
 )
 
 var ValidServices = map[string]ServiceName{
 	"postgres": Postgres,
 	"redis":    Redis,
 	"rabbitmq": RabbitMQ,
+	"aistor":   AIStor,
 }
 
 type Registry struct {
@@ -56,6 +58,7 @@ type Services struct {
 	Postgres *PostgresConfig `json:"postgres,omitempty"`
 	Redis    *RedisConfig    `json:"redis,omitempty"`
 	RabbitMQ *RabbitMQConfig `json:"rabbitmq,omitempty"`
+	AIStor   *AIStorConfig   `json:"aistor,omitempty"`
 }
 
 type PostgresConfig struct {
@@ -74,6 +77,13 @@ type RabbitMQConfig struct {
 	Vhost    string `json:"vhost"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type AIStorConfig struct {
+	Bucket    string `json:"bucket"`
+	AccessKey string `json:"accessKey"`
+	SecretKey string `json:"secretKey"`
+	Endpoint  string `json:"endpoint"`
 }
 
 type Store struct {
@@ -281,7 +291,7 @@ func ParseServices(values []string) ([]string, error) {
 }
 
 func (a App) ServiceNames() []string {
-	names := make([]string, 0, 3)
+	names := make([]string, 0, 4)
 	if a.Entry.Services.Postgres != nil {
 		names = append(names, string(Postgres))
 	}
@@ -290,6 +300,9 @@ func (a App) ServiceNames() []string {
 	}
 	if a.Entry.Services.RabbitMQ != nil {
 		names = append(names, string(RabbitMQ))
+	}
+	if a.Entry.Services.AIStor != nil {
+		names = append(names, string(AIStor))
 	}
 	return names
 }
@@ -303,7 +316,7 @@ func (a App) CreatedAtTime() time.Time {
 }
 
 func (a App) EnvBlocks() []EnvBlock {
-	blocks := make([]EnvBlock, 0, 3)
+	blocks := make([]EnvBlock, 0, 4)
 	if cfg := a.Entry.Services.Postgres; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "PostgreSQL", Body: postgresEnv(*cfg)})
 	}
@@ -312,6 +325,9 @@ func (a App) EnvBlocks() []EnvBlock {
 	}
 	if cfg := a.Entry.Services.RabbitMQ; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "RabbitMQ", Body: rabbitMQEnv(*cfg)})
+	}
+	if cfg := a.Entry.Services.AIStor; cfg != nil {
+		blocks = append(blocks, EnvBlock{Service: "AIStor", Body: aistorEnv(*cfg)})
 	}
 	return blocks
 }
@@ -358,5 +374,21 @@ func rabbitMQEnv(cfg RabbitMQConfig) string {
 		fmt.Sprintf("RABBITMQ_USERNAME=%s", cfg.Username),
 		fmt.Sprintf("RABBITMQ_PASSWORD=%s", cfg.Password),
 		fmt.Sprintf("RABBITMQ_VHOST=%s", cfg.Vhost),
+	}, "\n")
+}
+
+func aistorEnv(cfg AIStorConfig) string {
+	return strings.Join([]string{
+		"# === AIStor (S3) ===",
+		fmt.Sprintf("S3_ENDPOINT=%s", cfg.Endpoint),
+		fmt.Sprintf("S3_BUCKET=%s", cfg.Bucket),
+		"S3_REGION=us-east-1",
+		fmt.Sprintf("S3_ACCESS_KEY_ID=%s", cfg.AccessKey),
+		fmt.Sprintf("S3_SECRET_ACCESS_KEY=%s", cfg.SecretKey),
+		"S3_FORCE_PATH_STYLE=true",
+		fmt.Sprintf("AWS_ENDPOINT_URL=%s", cfg.Endpoint),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", cfg.AccessKey),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", cfg.SecretKey),
+		"AWS_REGION=us-east-1",
 	}, "\n")
 }

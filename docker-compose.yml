@@ -56,6 +56,27 @@ services:
     networks:
       - infra
 
+  # ─── AIStor Free (S3-compatible, ex-MinIO) ────────────────
+  aistor:
+    image: quay.io/minio/aistor/minio:latest
+    container_name: infra-aistor
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${AISTOR_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${AISTOR_ROOT_PASSWORD}
+    volumes:
+      - ${DATA_DIR:-./data}/aistor:/data
+    ports:
+      - "${AISTOR_API_PORT:-9000}:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local 2>/dev/null || curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - infra
+
   # ─── Web app ───────────────────────────────────────────────
   app:
     build:
@@ -90,6 +111,7 @@ services:
       - postgres
       - redis
       - rabbitmq
+      - aistor
     networks:
       - infra
 

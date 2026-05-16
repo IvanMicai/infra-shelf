@@ -1,4 +1,9 @@
-import type { PostgresConfig, RedisConfig, RabbitmqConfig } from "./types";
+import type {
+  PostgresConfig,
+  RedisConfig,
+  RabbitmqConfig,
+  AistorConfig,
+} from "./types";
 
 const green = (s: string) => `\x1b[32m${s}\x1b[0m`;
 const cyan = (s: string) => `\x1b[36m${s}\x1b[0m`;
@@ -52,5 +57,21 @@ export function rabbitmqEnv(config: RabbitmqConfig): string {
     `RABBITMQ_USERNAME=${config.username}`,
     `RABBITMQ_PASSWORD=${config.password}`,
     `RABBITMQ_VHOST=${config.vhost}`,
+  ].join("\n");
+}
+
+export function aistorEnv(config: AistorConfig): string {
+  return [
+    `# === AIStor (S3) ===`,
+    `S3_ENDPOINT=${config.endpoint}`,
+    `S3_BUCKET=${config.bucket}`,
+    `S3_REGION=us-east-1`,
+    `S3_ACCESS_KEY_ID=${config.accessKey}`,
+    `S3_SECRET_ACCESS_KEY=${config.secretKey}`,
+    `S3_FORCE_PATH_STYLE=true`,
+    `AWS_ENDPOINT_URL=${config.endpoint}`,
+    `AWS_ACCESS_KEY_ID=${config.accessKey}`,
+    `AWS_SECRET_ACCESS_KEY=${config.secretKey}`,
+    `AWS_REGION=us-east-1`,
   ].join("\n");
 }

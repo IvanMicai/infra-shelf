@@ -3,6 +3,7 @@ import { loadRegistry, saveRegistry } from "../lib/registry";
 import * as postgres from "../services/postgres";
 import * as redis from "../services/redis";
 import * as rabbitmq from "../services/rabbitmq";
+import * as aistor from "../services/aistor";
 
 export async function removeCommand(
   appName: string,
@@ -65,6 +66,15 @@ export async function removeCommand(
       log.success("RabbitMQ resources removed");
     } catch (err) {
       log.error(`Failed to remove RabbitMQ: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  if (app.services.aistor) {
+    try {
+      await aistor.teardown(appName);
+      log.success("AIStor resources removed");
+    } catch (err) {
+      log.error(`Failed to remove AIStor: ${err instanceof Error ? err.message : err}`);
     }
   }
 
