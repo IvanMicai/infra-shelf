@@ -25,12 +25,14 @@ const (
 	Postgres ServiceName = "postgres"
 	Redis    ServiceName = "redis"
 	RabbitMQ ServiceName = "rabbitmq"
+	AIStor   ServiceName = "aistor"
 )
 
 var ValidServices = map[string]ServiceName{
 	"postgres": Postgres,
 	"redis":    Redis,
 	"rabbitmq": RabbitMQ,
+	"aistor":   AIStor,
 }
 
 type Registry struct {
@@ -56,6 +58,7 @@ type Services struct {
 	Postgres *PostgresConfig `json:"postgres,omitempty"`
 	Redis    *RedisConfig    `json:"redis,omitempty"`
 	RabbitMQ *RabbitMQConfig `json:"rabbitmq,omitempty"`
+	AIStor   *AIStorConfig   `json:"aistor,omitempty"`
 }
 
 type PostgresConfig struct {
@@ -76,6 +79,13 @@ type RabbitMQConfig struct {
 	Password string `json:"password"`
 }
 
+type AIStorConfig struct {
+	Bucket    string `json:"bucket"`
+	AccessKey string `json:"accessKey"`
+	SecretKey string `json:"secretKey"`
+	Endpoint  string `json:"endpoint"`
+}
+
 type Store struct {
 	Path string
 }
@@ -89,6 +99,45 @@ type App struct {
 type EnvBlock struct {
 	Service string
 	Body    string
+}
+
+type ServiceInfo struct {
+	Name        string
+	Label       string
+	EnvBody     string
+	BackupGlob  string
+	BackupHow   string
+	RestoreNote string
+}
+
+var serviceCatalog = []ServiceName{Postgres, Redis, RabbitMQ, AIStor}
+
+var serviceLabels = map[ServiceName]string{
+	Postgres: "PostgreSQL",
+	Redis:    "Redis",
+	RabbitMQ: "RabbitMQ",
+	AIStor:   "AIStor",
+}
+
+var serviceBackupHow = map[ServiceName]string{
+	Postgres: "pg_dump --clean --if-exists do database dedicado — captura schema + dados; restore drop-and-reimport via psql.",
+	Redis:    "Snapshot logico via Lua: itera KEYS '<app>:*' e serializa strings/hashes/lists/sets/zsets em JSON; restore reescreve as chaves.",
+	RabbitMQ: "rabbitmqctl export_definitions filtrado pelo vhost — somente definicoes (queues/exchanges/bindings/policies/users). Mensagens em flight NAO sao salvas.",
+	AIStor:   "mc mirror local/<bucket> para diretorio temporario + tar streaming — preserva todos os objetos. Restore extrai o tar e roda mc mirror --overwrite --remove para refletir o estado do snapshot.",
+}
+
+var serviceRestoreNote = map[ServiceName]string{
+	Postgres: "psql -d <app> reimporta o dump; ownership e privilegios sao reaplicados ao role do app.",
+	Redis:    "Le o JSON e aplica SET/HSET/RPUSH/SADD/ZADD por chave; nao apaga chaves nao presentes no snapshot.",
+	RabbitMQ: "rabbitmqctl import_definitions re-cria objetos do vhost (idempotente).",
+	AIStor:   "Sobrescreve o bucket inteiro com o conteudo do tar (--remove apaga objetos que sumiram entre os pontos no tempo).",
+}
+
+var serviceBackupGlob = map[ServiceName]string{
+	Postgres: "postgres_<ts>.sql",
+	Redis:    "redis_<ts>.json",
+	RabbitMQ: "rabbitmq_<ts>.json",
+	AIStor:   "aistor_<ts>.tar",
 }
 
 func NewStore(path string) *Store {
@@ -280,8 +329,55 @@ func ParseServices(values []string) ([]string, error) {
 	return services, nil
 }
 
+func (a App) hasService(name ServiceName) bool {
+	switch name {
+	case Postgres:
+		return a.Entry.Services.Postgres != nil
+	case Redis:
+		return a.Entry.Services.Redis != nil
+	case RabbitMQ:
+		return a.Entry.Services.RabbitMQ != nil
+	case AIStor:
+		return a.Entry.Services.AIStor != nil
+	}
+	return false
+}
+
+func (a App) MissingServices() []string {
+	missing := []string{}
+	for _, s := range serviceCatalog {
+		if !a.hasService(s) {
+			missing = append(missing, string(s))
+		}
+	}
+	return missing
+}
+
+func (a App) ServiceInfos() []ServiceInfo {
+	blocks := map[string]string{}
+	for _, b := range a.EnvBlocks() {
+		blocks[b.Service] = b.Body
+	}
+	infos := []ServiceInfo{}
+	for _, s := range serviceCatalog {
+		if !a.hasService(s) {
+			continue
+		}
+		label := serviceLabels[s]
+		infos = append(infos, ServiceInfo{
+			Name:        string(s),
+			Label:       label,
+			EnvBody:     blocks[label],
+			BackupGlob:  serviceBackupGlob[s],
+			BackupHow:   serviceBackupHow[s],
+			RestoreNote: serviceRestoreNote[s],
+		})
+	}
+	return infos
+}
+
 func (a App) ServiceNames() []string {
-	names := make([]string, 0, 3)
+	names := make([]string, 0, 4)
 	if a.Entry.Services.Postgres != nil {
 		names = append(names, string(Postgres))
 	}
@@ -290,6 +386,9 @@ func (a App) ServiceNames() []string {
 	}
 	if a.Entry.Services.RabbitMQ != nil {
 		names = append(names, string(RabbitMQ))
+	}
+	if a.Entry.Services.AIStor != nil {
+		names = append(names, string(AIStor))
 	}
 	return names
 }
@@ -303,7 +402,7 @@ func (a App) CreatedAtTime() time.Time {
 }
 
 func (a App) EnvBlocks() []EnvBlock {
-	blocks := make([]EnvBlock, 0, 3)
+	blocks := make([]EnvBlock, 0, 4)
 	if cfg := a.Entry.Services.Postgres; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "PostgreSQL", Body: postgresEnv(*cfg)})
 	}
@@ -312,6 +411,9 @@ func (a App) EnvBlocks() []EnvBlock {
 	}
 	if cfg := a.Entry.Services.RabbitMQ; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "RabbitMQ", Body: rabbitMQEnv(*cfg)})
+	}
+	if cfg := a.Entry.Services.AIStor; cfg != nil {
+		blocks = append(blocks, EnvBlock{Service: "AIStor", Body: aistorEnv(*cfg)})
 	}
 	return blocks
 }
@@ -358,5 +460,21 @@ func rabbitMQEnv(cfg RabbitMQConfig) string {
 		fmt.Sprintf("RABBITMQ_USERNAME=%s", cfg.Username),
 		fmt.Sprintf("RABBITMQ_PASSWORD=%s", cfg.Password),
 		fmt.Sprintf("RABBITMQ_VHOST=%s", cfg.Vhost),
+	}, "\n")
+}
+
+func aistorEnv(cfg AIStorConfig) string {
+	return strings.Join([]string{
+		"# === AIStor (S3) ===",
+		fmt.Sprintf("S3_ENDPOINT=%s", cfg.Endpoint),
+		fmt.Sprintf("S3_BUCKET=%s", cfg.Bucket),
+		"S3_REGION=us-east-1",
+		fmt.Sprintf("S3_ACCESS_KEY_ID=%s", cfg.AccessKey),
+		fmt.Sprintf("S3_SECRET_ACCESS_KEY=%s", cfg.SecretKey),
+		"S3_FORCE_PATH_STYLE=true",
+		fmt.Sprintf("AWS_ENDPOINT_URL=%s", cfg.Endpoint),
+		fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", cfg.AccessKey),
+		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", cfg.SecretKey),
+		"AWS_REGION=us-east-1",
 	}, "\n")
 }

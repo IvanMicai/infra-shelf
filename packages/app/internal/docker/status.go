@@ -19,6 +19,7 @@ var containers = []Status{
 	{Service: "PostgreSQL", Container: "infra-postgres"},
 	{Service: "Redis", Container: "infra-redis"},
 	{Service: "RabbitMQ", Container: "infra-rabbitmq"},
+	{Service: "AIStor", Container: "infra-aistor"},
 }
 
 func ListStatus(ctx context.Context) []Status {

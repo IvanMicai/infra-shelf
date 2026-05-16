@@ -1,5 +1,5 @@
 import { loadRegistry } from "../lib/registry";
-import { log, postgresEnv, redisEnv, rabbitmqEnv } from "../lib/output";
+import { log, postgresEnv, redisEnv, rabbitmqEnv, aistorEnv } from "../lib/output";
 
 export async function listCommand(json: boolean): Promise<void> {
   const registry = await loadRegistry();
@@ -33,6 +33,9 @@ export async function listCommand(json: boolean): Promise<void> {
     }
     if (app.services.rabbitmq) {
       blocks.push(rabbitmqEnv(app.services.rabbitmq));
+    }
+    if (app.services.aistor) {
+      blocks.push(aistorEnv(app.services.aistor));
     }
 
     console.log(blocks.join("\n\n"));

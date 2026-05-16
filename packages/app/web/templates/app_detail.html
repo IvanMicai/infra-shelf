@@ -22,6 +22,22 @@
   </div>
 </section>
 
+{{if .App.MissingServices}}
+<section class="panel">
+  <div class="panel-header">
+    <h2>Attach services</h2>
+  </div>
+  <form method="post" action="/apps/{{.App.Name}}/services" class="inline-form">
+    <div class="checks">
+      {{range .App.MissingServices}}
+      <label class="check"><input type="checkbox" name="services" value="{{.}}"> {{serviceLabel .}}</label>
+      {{end}}
+    </div>
+    <button class="button primary" type="submit">Provision</button>
+  </form>
+</section>
+{{end}}
+
 <section class="panel">
   <div class="panel-header">
     <h2>Run backup</h2>
@@ -34,6 +50,29 @@
     </div>
     <button class="button primary" type="submit">Backup now</button>
   </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Backup strategy</h2>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Service</th><th>Backup</th><th>Restore</th><th>File</th></tr>
+    </thead>
+    <tbody>
+      {{range .App.ServiceInfos}}
+      <tr>
+        <td>{{.Label}}</td>
+        <td>{{.BackupHow}}</td>
+        <td>{{.RestoreNote}}</td>
+        <td><code>{{.BackupGlob}}</code></td>
+      </tr>
+      {{else}}
+      <tr><td colspan="4" class="empty">No services provisioned.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
 </section>
 
 <section class="panel">
@@ -56,6 +95,9 @@
           <a class="button small" href="/backups/{{.App}}/{{.Name}}/download">Download</a>
           <form method="post" action="/backups/{{.App}}/{{.Name}}/restore" onsubmit="return confirm('Restore this backup into {{.App}}?')">
             <button class="button small" type="submit">Restore</button>
+          </form>
+          <form method="post" action="/backups/{{.App}}/{{.Name}}/delete" onsubmit="return confirm('Delete {{.Name}}? This cannot be undone.')">
+            <button class="button small danger" type="submit">Delete</button>
           </form>
         </td>
       </tr>

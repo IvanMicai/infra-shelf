@@ -7,6 +7,7 @@ import type { ServiceName } from "../lib/types";
 import * as postgres from "../services/postgres";
 import * as redis from "../services/redis";
 import * as rabbitmq from "../services/rabbitmq";
+import * as aistor from "../services/aistor";
 
 const BACKUPS_DIR = resolve(process.cwd(), "backups");
 
@@ -14,12 +15,14 @@ const SERVICE_CONTAINERS: Record<ServiceName, string> = {
   postgres: "infra-postgres",
   redis: "infra-redis",
   rabbitmq: "infra-rabbitmq",
+  aistor: "infra-aistor",
 };
 
 function detectService(fileName: string): ServiceName | null {
   if (fileName.startsWith("postgres_")) return "postgres";
   if (fileName.startsWith("redis_")) return "redis";
   if (fileName.startsWith("rabbitmq_")) return "rabbitmq";
+  if (fileName.startsWith("aistor_")) return "aistor";
   return null;
 }
 
@@ -53,6 +56,9 @@ async function restoreService(
       break;
     case "rabbitmq":
       await rabbitmq.restore(appName, filePath);
+      break;
+    case "aistor":
+      await aistor.restore(appName, filePath);
       break;
   }
 }
@@ -88,7 +94,7 @@ export async function restoreCommand(
     const fileName = resolvedPath.split("/").pop() ?? "";
     const service = detectService(fileName);
     if (!service) {
-      log.error(`Cannot detect service from filename "${fileName}". Expected format: postgres_*, redis_*, rabbitmq_*`);
+      log.error(`Cannot detect service from filename "${fileName}". Expected format: postgres_*, redis_*, rabbitmq_*, aistor_*`);
       process.exit(1);
     }
 

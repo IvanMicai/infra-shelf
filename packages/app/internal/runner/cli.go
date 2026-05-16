@@ -38,6 +38,11 @@ func (c *CLI) Setup(ctx context.Context, appName string, services []string) (Res
 	return c.run(ctx, args...)
 }
 
+func (c *CLI) Add(ctx context.Context, appName string, services []string) (Result, error) {
+	args := []string{"shelf", "add", appName, "-s", strings.Join(services, ",")}
+	return c.run(ctx, args...)
+}
+
 func (c *CLI) Remove(ctx context.Context, appName string) (Result, error) {
 	return c.run(ctx, "shelf", "remove", appName, "--force")
 }

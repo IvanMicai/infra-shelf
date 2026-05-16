@@ -14,16 +14,17 @@ make up
 
 ## Serviços
 
-| Serviço    | Acesso (rede Docker)  | Isolamento por app          |
-|------------|-----------------------|-----------------------------|
-| PostgreSQL | `postgres:5432`       | Database + user dedicado    |
-| Redis      | `redis:6379`          | ACL user + prefixo de chave |
-| RabbitMQ   | `rabbitmq:5672`       | Vhost + user dedicado       |
+| Serviço    | Acesso (rede Docker)  | Isolamento por app             |
+|------------|-----------------------|--------------------------------|
+| PostgreSQL | `postgres:5432`       | Database + user dedicado       |
+| Redis      | `redis:6379`          | ACL user + prefixo de chave    |
+| RabbitMQ   | `rabbitmq:5672`       | Vhost + user dedicado          |
+| AIStor     | `aistor:9000`         | Bucket + access key dedicada   |
 
 ## CLI
 
 ```bash
-bun shelf setup meu-app -s postgres,redis,rabbitmq   # Provisionar
+bun shelf setup meu-app -s postgres,redis,rabbitmq,aistor   # Provisionar
 bun shelf list                                         # Listar apps
 bun shelf list --json                                  # Listar em JSON
 bun shelf backup meu-app                               # Backup
@@ -149,6 +150,18 @@ RABBITMQ_PORT=5672
 RABBITMQ_USERNAME=meu-app
 RABBITMQ_PASSWORD=fGhIjKlM
 RABBITMQ_VHOST=meu-app
+
+# === AIStor (S3) ===
+S3_ENDPOINT=http://aistor:9000
+S3_BUCKET=meu-app
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=meu-app
+S3_SECRET_ACCESS_KEY=nOpQrStU
+S3_FORCE_PATH_STYLE=true
+AWS_ENDPOINT_URL=http://aistor:9000
+AWS_ACCESS_KEY_ID=meu-app
+AWS_SECRET_ACCESS_KEY=nOpQrStU
+AWS_REGION=us-east-1
 ```
 
 ## Conectar Outros Projetos

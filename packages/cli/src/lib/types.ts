@@ -1,4 +1,4 @@
-export type ServiceName = "postgres" | "redis" | "rabbitmq";
+export type ServiceName = "postgres" | "redis" | "rabbitmq" | "aistor";
 
 export interface PostgresConfig {
   database: string;
@@ -18,12 +18,20 @@ export interface RabbitmqConfig {
   password: string;
 }
 
+export interface AistorConfig {
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+  endpoint: string;
+}
+
 export interface AppEntry {
   createdAt: string;
   services: {
     postgres?: PostgresConfig;
     redis?: RedisConfig;
     rabbitmq?: RabbitmqConfig;
+    aistor?: AistorConfig;
   };
 }
 

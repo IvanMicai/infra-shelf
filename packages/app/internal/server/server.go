@@ -104,6 +104,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /apps/{name}/credentials", s.appCredentials)
 	mux.HandleFunc("GET /apps/{name}/env", s.downloadEnv)
 	mux.HandleFunc("POST /apps/{name}/backup", s.backupApp)
+	mux.HandleFunc("POST /apps/{name}/services", s.addServices)
 	mux.HandleFunc("POST /apps/{name}/remove", s.removeApp)
 
 	mux.HandleFunc("GET /backups", s.backupsPage)
@@ -111,6 +112,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /backups/s3/sync", s.syncBackupsToS3)
 	mux.HandleFunc("GET /backups/{app}/{file}/download", s.downloadBackup)
 	mux.HandleFunc("POST /backups/{app}/{file}/restore", s.restoreBackup)
+	mux.HandleFunc("POST /backups/{app}/{file}/delete", s.deleteBackup)
 
 	mux.HandleFunc("GET /schedules", s.schedulesPage)
 	mux.HandleFunc("POST /schedules", s.createSchedule)
@@ -121,7 +123,23 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("GET /fragments/status", s.statusFragment)
 
+	mux.HandleFunc("GET /logout", s.logout)
+
 	return auth.Basic(s.cfg.Username, s.cfg.Password, secureHeaders(mux))
+}
+
+func (s *Server) logout(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("WWW-Authenticate", `Basic realm="infra-shelf-logout"`)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusUnauthorized)
+	_, _ = w.Write([]byte(`<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Logged out - infra-shelf</title>
+<link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="content"><section class="panel">
+<h1>Logged out</h1>
+<p>Voce saiu da sessao do infra-shelf.</p>
+<p><a class="button primary" href="/">Sign in again</a></p>
+</section></main></body></html>`))
 }
 
 func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
@@ -248,6 +266,22 @@ func (s *Server) appCredentials(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if service := r.URL.Query().Get("service"); service != "" {
+		for _, info := range app.ServiceInfos() {
+			if info.Name == service {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				fmt.Fprintf(w,
+					`<pre id="cred-%s" class="env-box">%s</pre>`,
+					template.HTMLEscapeString(info.Name),
+					template.HTMLEscapeString(info.EnvBody),
+				)
+				return
+			}
+		}
+		http.NotFound(w, r)
+		return
+	}
+
 	data := s.page(r, appName, "apps")
 	data.App = app
 	data.EnvFile = app.EnvFile()
@@ -289,6 +323,44 @@ func (s *Server) downloadEnv(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.env"`, appName))
 	_, _ = w.Write([]byte(app.EnvFile() + "\n"))
+}
+
+func (s *Server) addServices(w http.ResponseWriter, r *http.Request) {
+	appName := r.PathValue("name")
+	target := "/apps/" + url.PathEscape(appName)
+
+	if _, ok, err := s.registry.GetApp(appName); err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	} else if !ok {
+		http.NotFound(w, r)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	}
+	services, err := registry.ParseServices(r.Form["services"])
+	if err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	}
+	if len(services) == 0 {
+		s.redirect(w, r, target, "error", "select at least one service")
+		return
+	}
+	if err := s.requireServicesRunning(r.Context(), services); err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	}
+
+	result, err := s.cli.Add(r.Context(), appName, services)
+	if err != nil {
+		s.redirect(w, r, target, "error", withOutput(err, result.Output))
+		return
+	}
+	s.redirect(w, r, target, "success", "services attached")
 }
 
 func (s *Server) removeApp(w http.ResponseWriter, r *http.Request) {
@@ -371,6 +443,20 @@ func (s *Server) restoreBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.redirect(w, r, target, "success", "backup restored")
+}
+
+func (s *Server) deleteBackup(w http.ResponseWriter, r *http.Request) {
+	appName := r.PathValue("app")
+	fileName := r.PathValue("file")
+	redirect := r.Referer()
+	if redirect == "" {
+		redirect = "/backups"
+	}
+	if _, err := s.backups.DeleteFile(r.Context(), appName, fileName); err != nil {
+		s.redirect(w, r, redirect, "error", err.Error())
+		return
+	}
+	s.redirect(w, r, redirect, "success", fmt.Sprintf("deleted %s", fileName))
 }
 
 func (s *Server) schedulesPage(w http.ResponseWriter, r *http.Request) {
@@ -594,6 +680,7 @@ func (s *Server) requireServicesRunning(ctx context.Context, services []string) 
 		"postgres": "infra-postgres",
 		"redis":    "infra-redis",
 		"rabbitmq": "infra-rabbitmq",
+		"aistor":   "infra-aistor",
 	}
 	statusByContainer := map[string]docker.Status{}
 	for _, status := range docker.ListStatus(ctx) {
@@ -718,6 +805,8 @@ func serviceLabel(service string) string {
 		return "Redis"
 	case "rabbitmq":
 		return "RabbitMQ"
+	case "aistor":
+		return "AIStor"
 	default:
 		return service
 	}
