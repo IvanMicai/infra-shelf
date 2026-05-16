@@ -104,6 +104,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /apps/{name}/credentials", s.appCredentials)
 	mux.HandleFunc("GET /apps/{name}/env", s.downloadEnv)
 	mux.HandleFunc("POST /apps/{name}/backup", s.backupApp)
+	mux.HandleFunc("POST /apps/{name}/services", s.addServices)
 	mux.HandleFunc("POST /apps/{name}/remove", s.removeApp)
 
 	mux.HandleFunc("GET /backups", s.backupsPage)
@@ -265,6 +266,22 @@ func (s *Server) appCredentials(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if service := r.URL.Query().Get("service"); service != "" {
+		for _, info := range app.ServiceInfos() {
+			if info.Name == service {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				fmt.Fprintf(w,
+					`<pre id="cred-%s" class="env-box">%s</pre>`,
+					template.HTMLEscapeString(info.Name),
+					template.HTMLEscapeString(info.EnvBody),
+				)
+				return
+			}
+		}
+		http.NotFound(w, r)
+		return
+	}
+
 	data := s.page(r, appName, "apps")
 	data.App = app
 	data.EnvFile = app.EnvFile()
@@ -306,6 +323,44 @@ func (s *Server) downloadEnv(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.env"`, appName))
 	_, _ = w.Write([]byte(app.EnvFile() + "\n"))
+}
+
+func (s *Server) addServices(w http.ResponseWriter, r *http.Request) {
+	appName := r.PathValue("name")
+	target := "/apps/" + url.PathEscape(appName)
+
+	if _, ok, err := s.registry.GetApp(appName); err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	} else if !ok {
+		http.NotFound(w, r)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	}
+	services, err := registry.ParseServices(r.Form["services"])
+	if err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	}
+	if len(services) == 0 {
+		s.redirect(w, r, target, "error", "select at least one service")
+		return
+	}
+	if err := s.requireServicesRunning(r.Context(), services); err != nil {
+		s.redirect(w, r, target, "error", err.Error())
+		return
+	}
+
+	result, err := s.cli.Add(r.Context(), appName, services)
+	if err != nil {
+		s.redirect(w, r, target, "error", withOutput(err, result.Output))
+		return
+	}
+	s.redirect(w, r, target, "success", "services attached")
 }
 
 func (s *Server) removeApp(w http.ResponseWriter, r *http.Request) {

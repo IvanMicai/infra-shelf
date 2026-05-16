@@ -101,6 +101,45 @@ type EnvBlock struct {
 	Body    string
 }
 
+type ServiceInfo struct {
+	Name        string
+	Label       string
+	EnvBody     string
+	BackupGlob  string
+	BackupHow   string
+	RestoreNote string
+}
+
+var serviceCatalog = []ServiceName{Postgres, Redis, RabbitMQ, AIStor}
+
+var serviceLabels = map[ServiceName]string{
+	Postgres: "PostgreSQL",
+	Redis:    "Redis",
+	RabbitMQ: "RabbitMQ",
+	AIStor:   "AIStor",
+}
+
+var serviceBackupHow = map[ServiceName]string{
+	Postgres: "pg_dump --clean --if-exists do database dedicado — captura schema + dados; restore drop-and-reimport via psql.",
+	Redis:    "Snapshot logico via Lua: itera KEYS '<app>:*' e serializa strings/hashes/lists/sets/zsets em JSON; restore reescreve as chaves.",
+	RabbitMQ: "rabbitmqctl export_definitions filtrado pelo vhost — somente definicoes (queues/exchanges/bindings/policies/users). Mensagens em flight NAO sao salvas.",
+	AIStor:   "mc mirror local/<bucket> para diretorio temporario + tar streaming — preserva todos os objetos. Restore extrai o tar e roda mc mirror --overwrite --remove para refletir o estado do snapshot.",
+}
+
+var serviceRestoreNote = map[ServiceName]string{
+	Postgres: "psql -d <app> reimporta o dump; ownership e privilegios sao reaplicados ao role do app.",
+	Redis:    "Le o JSON e aplica SET/HSET/RPUSH/SADD/ZADD por chave; nao apaga chaves nao presentes no snapshot.",
+	RabbitMQ: "rabbitmqctl import_definitions re-cria objetos do vhost (idempotente).",
+	AIStor:   "Sobrescreve o bucket inteiro com o conteudo do tar (--remove apaga objetos que sumiram entre os pontos no tempo).",
+}
+
+var serviceBackupGlob = map[ServiceName]string{
+	Postgres: "postgres_<ts>.sql",
+	Redis:    "redis_<ts>.json",
+	RabbitMQ: "rabbitmq_<ts>.json",
+	AIStor:   "aistor_<ts>.tar",
+}
+
 func NewStore(path string) *Store {
 	return &Store{Path: path}
 }
@@ -288,6 +327,53 @@ func ParseServices(values []string) ([]string, error) {
 	}
 
 	return services, nil
+}
+
+func (a App) hasService(name ServiceName) bool {
+	switch name {
+	case Postgres:
+		return a.Entry.Services.Postgres != nil
+	case Redis:
+		return a.Entry.Services.Redis != nil
+	case RabbitMQ:
+		return a.Entry.Services.RabbitMQ != nil
+	case AIStor:
+		return a.Entry.Services.AIStor != nil
+	}
+	return false
+}
+
+func (a App) MissingServices() []string {
+	missing := []string{}
+	for _, s := range serviceCatalog {
+		if !a.hasService(s) {
+			missing = append(missing, string(s))
+		}
+	}
+	return missing
+}
+
+func (a App) ServiceInfos() []ServiceInfo {
+	blocks := map[string]string{}
+	for _, b := range a.EnvBlocks() {
+		blocks[b.Service] = b.Body
+	}
+	infos := []ServiceInfo{}
+	for _, s := range serviceCatalog {
+		if !a.hasService(s) {
+			continue
+		}
+		label := serviceLabels[s]
+		infos = append(infos, ServiceInfo{
+			Name:        string(s),
+			Label:       label,
+			EnvBody:     blocks[label],
+			BackupGlob:  serviceBackupGlob[s],
+			BackupHow:   serviceBackupHow[s],
+			RestoreNote: serviceRestoreNote[s],
+		})
+	}
+	return infos
 }
 
 func (a App) ServiceNames() []string {

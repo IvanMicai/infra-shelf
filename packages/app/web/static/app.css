@@ -469,6 +469,86 @@ code {
   border-radius: 5px;
 }
 
+.service-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+  padding: 18px;
+}
+
+.service-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.service-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.service-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.service-card .strategy {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.service-card .strategy strong {
+  color: var(--text);
+}
+
+.service-card details {
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: #fafbf8;
+}
+
+.service-card details > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  list-style: none;
+}
+
+.service-card details[open] > summary {
+  margin-bottom: 8px;
+}
+
+.service-card pre.env-box {
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  font-size: 12.5px;
+  background: #f4f6f1;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.service-card .card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+
+.service-card .card-actions form {
+  margin: 0;
+}
+
 @media (max-width: 920px) {
   body {
     grid-template-columns: 1fr;

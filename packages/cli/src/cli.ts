@@ -10,6 +10,7 @@ function printUsage(): void {
 
   Commands:
     setup <app>    Provision resources for an app
+    add <app>      Attach more services to an existing app
     list           List all provisioned apps
     remove <app>   Remove resources for an app
     backup <app>   Backup app data
@@ -19,6 +20,7 @@ function printUsage(): void {
 
   Examples:
     bun shelf setup my-app -s postgres,redis,rabbitmq,aistor
+    bun shelf add my-app -s aistor
     bun shelf list --json
     bun shelf remove my-app --force
     bun shelf backup my-app
@@ -55,6 +57,29 @@ switch (command) {
 
     const { setupCommand } = await import("./commands/setup");
     await setupCommand(appName, serviceList as ServiceName[]);
+    break;
+  }
+
+  case "add": {
+    const { values, positionals } = parseArgs({
+      args: commandArgs,
+      allowPositionals: true,
+      options: {
+        services: { type: "string", short: "s" },
+      },
+    });
+
+    const appName = positionals[0];
+    const serviceList = values.services?.split(",") ?? [];
+
+    const invalid = serviceList.filter((s) => !VALID_SERVICES.has(s));
+    if (invalid.length > 0) {
+      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor`);
+      process.exit(1);
+    }
+
+    const { addCommand } = await import("./commands/add");
+    await addCommand(appName, serviceList as ServiceName[]);
     break;
   }
 
