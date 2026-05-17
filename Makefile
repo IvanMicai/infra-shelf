@@ -1,4 +1,4 @@
-.PHONY: up down restart status logs logs-% reset clean network app dev app-build app-logs signoz-up signoz-down signoz-restart signoz-logs signoz-status up-all help
+.PHONY: help up down restart status logs logs-% reset clean network app dev app-build app-logs signoz-up signoz-down signoz-restart signoz-logs signoz-status up-all build cli web test
 
 ENV_FILE ?= .env
 SIGNOZ_COMPOSE := -f docker-compose.yml -f docker-compose.signoz.yml
@@ -6,6 +6,17 @@ SIGNOZ_COMPOSE := -f docker-compose.yml -f docker-compose.signoz.yml
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+build: cli web ## Build both binaries
+
+cli: ## Build the shelf CLI binary (./shelf)
+	CGO_ENABLED=0 go build -trimpath -o shelf ./cmd/shelf
+
+web: ## Build the shelf-web binary (./shelf-web)
+	CGO_ENABLED=0 go build -trimpath -o shelf-web ./cmd/shelf-web
+
+test: ## Run the unit + integration test suite
+	go test ./...
 
 up: ## Start all services
 	docker compose --env-file $(ENV_FILE) up -d

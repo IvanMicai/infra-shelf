@@ -8,7 +8,7 @@ A CLI gerencia o provisionamento de credenciais isoladas por app — cada app re
 
 ```bash
 cp .env.example .env
-bun install
+make build   # compila ./shelf e ./shelf-web (Go puro, sem CGO)
 make up
 ```
 
@@ -25,34 +25,33 @@ make up
 ## CLI
 
 ```bash
-bun shelf setup meu-app -s postgres,redis,rabbitmq,aistor,signoz   # Provisionar
-bun shelf list                                         # Listar apps
-bun shelf list --json                                  # Listar em JSON
-bun shelf backup meu-app                               # Backup
-bun shelf backup --all                                 # Backup de todos
-bun shelf restore meu-app                              # Restaurar último backup
-bun shelf restore meu-app --file backups/meu-app/postgres_20260405T0300.sql
-bun shelf remove meu-app                               # Remover
-bun shelf status                                       # Status dos containers
+./shelf setup meu-app -s postgres,redis,rabbitmq,aistor,signoz   # Provisionar
+./shelf list                                         # Listar apps
+./shelf list --json                                  # Listar em JSON
+./shelf backup meu-app                               # Backup
+./shelf backup --all                                 # Backup de todos
+./shelf restore meu-app                              # Restaurar último backup
+./shelf restore meu-app --file backups/meu-app/postgres_20260405T0300.sql
+./shelf remove meu-app                               # Remover
+./shelf status                                       # Status dos containers
 ```
+
+A CLI é um binário Go estático (sem CGO, sem runtime extra). `make cli` compila apenas ela; `make build` compila CLI + web juntos.
 
 ## Interface Web
 
-A interface grafica fica em `packages/app` e usa Go templates + HTMX. Ela le o
-registry atual da CLI, chama a CLI para provisionar/remover/backup/restore e usa
-SQLite para salvar schedules e historico de execucoes.
-Na pagina de cada app, as credenciais ficam ocultas ate acionar o botao
-`Reveal credentials`.
+A interface gráfica (`./shelf-web`) usa Go templates + HTMX. Ela compartilha o mesmo `internal/shelfcore` que a CLI — sem subprocess, sem parsing de stdout. SQLite (driver pure-Go `modernc.org/sqlite`) guarda schedules e histórico de execuções.
+
+Na página de cada app, as credenciais ficam ocultas até acionar o botão `Reveal credentials`.
 
 ```bash
-make app
+make app          # sobe o web em container
+# ou rodar local: ./shelf-web
 ```
 
-Por padrao ela sobe em `http://127.0.0.1:8080` com Basic Auth
-`admin` / `admin`. Configure `APP_USERNAME` e `APP_PASSWORD` antes de expor fora
-da maquina local.
+Por padrão ela sobe em `http://127.0.0.1:8080` com Basic Auth `admin` / `admin`. Configure `APP_USERNAME` e `APP_PASSWORD` antes de expor fora da máquina local.
 
-Variaveis uteis:
+Variáveis úteis:
 
 ```bash
 APP_ADDR=127.0.0.1:8080
@@ -68,24 +67,19 @@ BACKUP_S3_PREFIX=infra-shelf/backups
 
 ### Criptografia do registry
 
-Por padrao, a CLI mantem compatibilidade com o registry antigo em texto claro.
-Para salvar credenciais criptografadas, defina `INFRA_SHELF_SECRET` no `.env`
-local e rode:
+Por padrão, a CLI mantém compatibilidade com o registry antigo em texto claro. Para salvar credenciais criptografadas, defina `INFRA_SHELF_SECRET` no `.env` local e rode:
 
 ```bash
 secret="$(openssl rand -base64 32)"
 printf '\nINFRA_SHELF_SECRET=%s\n' "$secret" >> .env
-bun shelf registry encrypt
+./shelf registry encrypt
 ```
 
-Guarde esse secret: sem ele, a CLI e a interface web nao conseguem revelar as
-credenciais ja salvas no registry criptografado. Novas alteracoes no registry
-continuam sendo salvas criptografadas enquanto esse secret estiver definido.
+O formato AES-256-GCM é bit-compatível com o registry criptografado pela CLI TypeScript anterior — instalações existentes continuam funcionando sem ressetar o secret. Sem ele, a CLI e a interface web não conseguem revelar as credenciais já salvas. Novas alterações no registry continuam sendo salvas criptografadas enquanto o secret estiver definido.
 
 ### Backups no S3
 
-A interface web pode enviar backups locais para S3 automaticamente depois de
-cada backup manual ou agendado. Configure no `.env`:
+A interface web pode enviar backups locais para S3 automaticamente depois de cada backup manual ou agendado. Configure no `.env`:
 
 ```bash
 BACKUP_S3_BUCKET=meu-bucket
@@ -95,29 +89,24 @@ AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
 ```
 
-Se voce usa MinIO, LocalStack ou outro storage compativel com S3, tambem pode
-usar:
+Para MinIO, LocalStack ou outro storage compatível com S3:
 
 ```bash
 BACKUP_S3_ENDPOINT=http://localhost:9000
 BACKUP_S3_FORCE_PATH_STYLE=true
 ```
 
-Com `BACKUP_S3_BUCKET` configurado, backups novos sao enviados para
-`s3://bucket/prefix/{app}/{arquivo}`. A tela de Backups tambem tem uma acao para
-enviar backups locais ja existentes.
+Com `BACKUP_S3_BUCKET` configurado, backups novos vão para `s3://bucket/prefix/{app}/{arquivo}`. A tela de Backups também tem uma ação para enviar backups locais já existentes.
 
-### Rotacao de backups
+### Rotação de backups
 
-Os schedules da interface web permitem configurar retencao por app:
+Os schedules da interface web permitem configurar retenção por app:
 
-- `Keep days`: remove backups mais antigos que esse numero de dias.
-- `Keep files`: mantem no maximo essa quantidade de arquivos por app/servico.
+- `Keep days`: remove backups mais antigos que esse número de dias.
+- `Keep files`: mantém no máximo essa quantidade de arquivos por app/serviço.
 - `0`: desativa aquela regra.
 
-A rotacao roda depois de backups agendados concluidos com sucesso. Quando S3
-esta configurado, a interface tambem tenta remover do bucket os objetos
-correspondentes aos arquivos locais apagados.
+A rotação roda depois de backups agendados concluídos com sucesso. Quando S3 está configurado, a interface também tenta remover do bucket os objetos correspondentes aos arquivos locais apagados.
 
 ### Exemplo de output do setup
 
@@ -195,21 +184,25 @@ Os hostnames `postgres`, `redis` e `rabbitmq` são resolvidos automaticamente de
 
 ## Observabilidade (SignOz)
 
-Stack opt-in pra logs, traces e metricas centralizados. Ver detalhes em [`signoz/README.md`](signoz/README.md).
+Stack opt-in pra logs, traces e métricas centralizados. Ver detalhes em [`signoz/README.md`](signoz/README.md).
 
 ```bash
 make signoz-up           # liga clickhouse + collector + UI (~1min no primeiro boot)
 open http://localhost:3301
-bun shelf setup obs-test -s postgres,signoz   # provisiona com bloco OTEL pronto
+./shelf setup obs-test -s postgres,signoz   # provisiona com bloco OTEL pronto
 ```
 
-Apps colam o bloco `# === SignOz (OpenTelemetry) ===` no `.env` e qualquer SDK OTel padrao (Python, Node, Go) detecta automaticamente o endpoint `http://signoz-otel-collector:4317`. Logs stdout dos containers `infra-*` ja sao coletados via collector (filtro por label `infra-shelf.observe=true`); metricas de container e do host tambem.
+Apps colam o bloco `# === SignOz (OpenTelemetry) ===` no `.env` e qualquer SDK OTel padrão (Python, Node, Go) detecta automaticamente o endpoint `http://signoz-otel-collector:4317`. Logs stdout dos containers `infra-*` já são coletados via collector (filtro por label `infra-shelf.observe=true`); métricas de container e do host também.
 
-SignOz nao tem backup per-app — telemetria fica no ClickHouse compartilhado e expira pela retention policy configurada na UI.
+SignOz não tem backup per-app — telemetria fica no ClickHouse compartilhado e expira pela retention policy configurada na UI.
 
 ## Comandos Make
 
 ```bash
+make build     # Compila ./shelf e ./shelf-web
+make cli       # Apenas a CLI
+make web       # Apenas o web
+make test      # go test ./...
 make up        # Iniciar todos os serviços
 make down      # Parar todos os serviços
 make restart   # Reiniciar todos os serviços
@@ -218,4 +211,19 @@ make logs      # Logs de todos os serviços
 make logs-postgres  # Logs de um serviço específico
 make network   # Ver containers na rede compartilhada
 make reset     # Parar e apagar todos os dados
+```
+
+## Layout do código
+
+```
+cmd/
+  shelf/         # CLI (Go binário estático)
+  shelf-web/     # web server
+internal/
+  shelfcore/     # API compartilhada entre CLI e web (Setup/Add/Backup/...)
+  registry/      # apps.json + cripto AES-256-GCM
+  services/      # postgres / redis / rabbitmq / aistor / signoz
+  cli/           # comandos cobra
+  web/           # handlers, scheduler, backupservice, assets
+  backup/  config/  docker/  envspec/  output/  passwordgen/  s3backup/
 ```

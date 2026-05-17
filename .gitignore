@@ -10,11 +10,9 @@ data/
 # Backups
 backups/
 
-# Dependencies
-node_modules/
-
-# Build output
-dist/
+# Built binaries
+/shelf
+/shelf-web
 
 # OS
 .DS_Store

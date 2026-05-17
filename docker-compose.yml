@@ -98,7 +98,7 @@ services:
   # ─── Web app ───────────────────────────────────────────────
   app:
     build:
-      context: ./packages/app
+      context: .
       dockerfile: Dockerfile
     container_name: infra-shelf-app
     restart: unless-stopped
@@ -112,7 +112,7 @@ services:
       INFRA_SHELF_ROOT: /workspace
       APP_DATABASE_PATH: /workspace/data/app/infra-shelf-app.db
       INFRA_SHELF_BACKUPS_DIR: /workspace/backups
-      INFRA_SHELF_REGISTRY_PATH: /workspace/packages/cli/src/apps.json
+      INFRA_SHELF_REGISTRY_PATH: /workspace/data/apps.json
       INFRA_SHELF_SECRET: ${INFRA_SHELF_SECRET:-}
       BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
       BACKUP_S3_REGION: ${BACKUP_S3_REGION:-us-east-1}
