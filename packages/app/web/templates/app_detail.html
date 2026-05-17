@@ -40,6 +40,46 @@
 
 <section class="panel">
   <div class="panel-header">
+    <h2>Addons</h2>
+  </div>
+  {{if or .App.AddonInfos .App.MissingAddons}}
+  <table>
+    <thead>
+      <tr><th>Addon</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .App.AddonInfos}}
+      <tr>
+        <td>{{.Label}}</td>
+        <td><span class="pill ok">attached</span></td>
+        <td class="actions">
+          <form method="post" action="/apps/{{$.App.Name}}/addons/{{.Name}}/detach" onsubmit="return confirm('Detach {{.Label}} from {{$.App.Name}}?')">
+            <button class="button small danger" type="submit">Detach</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+      {{range .App.MissingAddons}}
+      <tr>
+        <td>{{serviceLabel .}}</td>
+        <td><span class="pill muted">not attached</span></td>
+        <td class="actions">
+          <form method="post" action="/apps/{{$.App.Name}}/services">
+            <input type="hidden" name="services" value="{{.}}">
+            <button class="button small" type="submit">Attach</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="empty">No addons available.</p>
+  {{end}}
+</section>
+
+<section class="panel">
+  <div class="panel-header">
     <h2>Run backup</h2>
   </div>
   <form method="post" action="/apps/{{.App.Name}}/backup" class="inline-form">
@@ -50,29 +90,6 @@
     </div>
     <button class="button primary" type="submit">Backup now</button>
   </form>
-</section>
-
-<section class="panel">
-  <div class="panel-header">
-    <h2>Backup strategy</h2>
-  </div>
-  <table>
-    <thead>
-      <tr><th>Service</th><th>Backup</th><th>Restore</th><th>File</th></tr>
-    </thead>
-    <tbody>
-      {{range .App.ServiceInfos}}
-      <tr>
-        <td>{{.Label}}</td>
-        <td>{{.BackupHow}}</td>
-        <td>{{.RestoreNote}}</td>
-        <td><code>{{.BackupGlob}}</code></td>
-      </tr>
-      {{else}}
-      <tr><td colspan="4" class="empty">No services provisioned.</td></tr>
-      {{end}}
-    </tbody>
-  </table>
 </section>
 
 <section class="panel">

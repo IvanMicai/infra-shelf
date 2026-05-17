@@ -117,6 +117,7 @@ type ServiceInfo struct {
 	BackupHow   string
 	RestoreNote string
 	Backupable  bool
+	IsAddon     bool
 }
 
 var serviceCatalog = []ServiceName{Postgres, Redis, RabbitMQ, AIStor, Signoz}
@@ -154,6 +155,14 @@ var serviceBackupGlob = map[ServiceName]string{
 }
 
 var nonBackupable = map[ServiceName]bool{
+	Signoz: true,
+}
+
+// Addons aren't per-app provisioned resources — they're shelf-wide
+// capabilities an app opts into. Today only SignOz qualifies (no
+// credentials, no isolation, just config). The UI splits services vs.
+// addons for clarity.
+var addons = map[ServiceName]bool{
 	Signoz: true,
 }
 
@@ -362,9 +371,15 @@ func (a App) hasService(name ServiceName) bool {
 	return false
 }
 
+// MissingServices lists missing non-addon services — the ones with real
+// per-app provisioning (DB, ACL user, vhost, bucket). Used by the
+// "Attach services" form on the app detail page.
 func (a App) MissingServices() []string {
 	missing := []string{}
 	for _, s := range serviceCatalog {
+		if addons[s] {
+			continue
+		}
 		if !a.hasService(s) {
 			missing = append(missing, string(s))
 		}
@@ -372,7 +387,21 @@ func (a App) MissingServices() []string {
 	return missing
 }
 
-func (a App) ServiceInfos() []ServiceInfo {
+// MissingAddons lists addons the app could still attach.
+func (a App) MissingAddons() []string {
+	missing := []string{}
+	for _, s := range serviceCatalog {
+		if !addons[s] {
+			continue
+		}
+		if !a.hasService(s) {
+			missing = append(missing, string(s))
+		}
+	}
+	return missing
+}
+
+func (a App) buildServiceInfos(predicate func(ServiceName) bool) []ServiceInfo {
 	blocks := map[string]string{}
 	for _, b := range a.EnvBlocks() {
 		blocks[b.Service] = b.Body
@@ -380,6 +409,9 @@ func (a App) ServiceInfos() []ServiceInfo {
 	infos := []ServiceInfo{}
 	for _, s := range serviceCatalog {
 		if !a.hasService(s) {
+			continue
+		}
+		if !predicate(s) {
 			continue
 		}
 		label := serviceLabels[s]
@@ -391,9 +423,22 @@ func (a App) ServiceInfos() []ServiceInfo {
 			BackupHow:   serviceBackupHow[s],
 			RestoreNote: serviceRestoreNote[s],
 			Backupable:  !nonBackupable[s],
+			IsAddon:     addons[s],
 		})
 	}
 	return infos
+}
+
+// ServiceInfos returns only non-addon services (for the Backup strategy
+// table on the app detail page).
+func (a App) ServiceInfos() []ServiceInfo {
+	return a.buildServiceInfos(func(s ServiceName) bool { return !addons[s] })
+}
+
+// AddonInfos returns only the addons currently attached (for the Addons
+// section on the app detail page).
+func (a App) AddonInfos() []ServiceInfo {
+	return a.buildServiceInfos(func(s ServiceName) bool { return addons[s] })
 }
 
 func (a App) ServiceNames() []string {

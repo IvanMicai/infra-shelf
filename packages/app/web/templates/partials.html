@@ -30,6 +30,13 @@
 <label class="check"><input type="checkbox" name="services" value="aistor"> AIStor</label>
 {{end}}
 
+{{/* Addons share the same `services` form key — the CLI treats them uniformly.
+     Splitting visually clarifies what's provisioned (per-app credentials) vs.
+     what's a shelf-wide capability the app opts into. */}}
+{{define "addonChecks"}}
+<label class="check"><input type="checkbox" name="services" value="signoz"> SignOz (observabilidade)</label>
+{{end}}
+
 {{define "pageStart"}}
 <!doctype html>
 <html lang="pt-BR">

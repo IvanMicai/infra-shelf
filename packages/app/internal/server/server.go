@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -105,6 +106,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /apps/{name}/env", s.downloadEnv)
 	mux.HandleFunc("POST /apps/{name}/backup", s.backupApp)
 	mux.HandleFunc("POST /apps/{name}/services", s.addServices)
+	mux.HandleFunc("POST /apps/{name}/addons/{addon}/detach", s.detachAddon)
 	mux.HandleFunc("POST /apps/{name}/remove", s.removeApp)
 
 	mux.HandleFunc("GET /backups", s.backupsPage)
@@ -206,18 +208,29 @@ func (s *Server) createApp(w http.ResponseWriter, r *http.Request) {
 		s.redirect(w, r, "/apps", "error", "select at least one service")
 		return
 	}
+	envSpec, err := parseEnvsField(r.FormValue("envs"))
+	if err != nil {
+		s.redirect(w, r, "/apps", "error", err.Error())
+		return
+	}
 	if err := s.requireServicesRunning(r.Context(), services); err != nil {
 		s.redirect(w, r, "/apps", "error", err.Error())
 		return
 	}
 
-	result, err := s.cli.Setup(r.Context(), appName, services)
+	result, err := s.cli.Setup(r.Context(), appName, services, envSpec)
 	if err != nil {
 		s.redirect(w, r, "/apps", "error", withOutput(err, result.Output))
 		return
 	}
 
-	s.redirect(w, r, "/apps/"+url.PathEscape(appName), "success", "app provisioned")
+	// Multi-env expansion lands on the first sibling; tag-only and default
+	// modes land on the app itself.
+	landing := appName
+	if len(envSpec.Multi) > 0 {
+		landing = appName + "-" + envSpec.Multi[0]
+	}
+	s.redirect(w, r, "/apps/"+url.PathEscape(landing), "success", "app provisioned")
 }
 
 func (s *Server) startInfrastructure(w http.ResponseWriter, r *http.Request) {
@@ -355,12 +368,33 @@ func (s *Server) addServices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.cli.Add(r.Context(), appName, services)
+	result, err := s.cli.Add(r.Context(), appName, services, runner.EnvSpec{})
 	if err != nil {
 		s.redirect(w, r, target, "error", withOutput(err, result.Output))
 		return
 	}
 	s.redirect(w, r, target, "success", "services attached")
+}
+
+// detachAddon strips an addon (e.g. signoz) from the app's registry entry.
+// Addons own no per-app resources, so this is purely a config flip — no
+// container changes, no credentials revoked.
+func (s *Server) detachAddon(w http.ResponseWriter, r *http.Request) {
+	appName := r.PathValue("name")
+	addon := r.PathValue("addon")
+	target := "/apps/" + url.PathEscape(appName)
+
+	if _, ok := registry.ValidServices[addon]; !ok {
+		s.redirect(w, r, target, "error", "invalid addon")
+		return
+	}
+
+	result, err := s.cli.Detach(r.Context(), appName, []string{addon})
+	if err != nil {
+		s.redirect(w, r, target, "error", withOutput(err, result.Output))
+		return
+	}
+	s.redirect(w, r, target, "success", addon+" detached")
 }
 
 func (s *Server) removeApp(w http.ResponseWriter, r *http.Request) {
@@ -813,6 +847,42 @@ func serviceLabel(service string) string {
 	default:
 		return service
 	}
+}
+
+var envNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+
+// parseEnvsField turns the form's Environment(s) input into an EnvSpec.
+// A bare value ("staging") tags a single app; a comma-separated value
+// ("staging,production") expands into siblings.
+func parseEnvsField(raw string) (runner.EnvSpec, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return runner.EnvSpec{}, nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := map[string]bool{}
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if !envNamePattern.MatchString(p) {
+			return runner.EnvSpec{}, fmt.Errorf("invalid env name %q (use lowercase letters, numbers, hyphens)", p)
+		}
+		if seen[p] {
+			return runner.EnvSpec{}, fmt.Errorf("duplicate env %q", p)
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	if len(out) == 0 {
+		return runner.EnvSpec{}, nil
+	}
+	if len(out) == 1 {
+		return runner.EnvSpec{Single: out[0]}, nil
+	}
+	return runner.EnvSpec{Multi: out}, nil
 }
 
 func statusClass(status string) string {

@@ -129,11 +129,14 @@ processors:
         value: infra-shelf
         action: upsert
 
-  # Container logs arrive without a service.name — derive one from the
-  # docker container name (which is itself derived from the container label
-  # we attach in docker-compose.yml).
-  resourcedetection/docker:
-    detectors: [env, system]
+  # Stamps host.name, os.type, container.id and friends on every signal
+  # that runs through this processor. Without it, SignOz's Infrastructure →
+  # Hosts tab shows blank entries because hostmetrics emit no host.name.
+  # `env` pulls OTEL_RESOURCE_ATTRIBUTES (set in docker-compose.signoz.yml),
+  # `system` reads the container's hostname, `docker` queries docker.sock
+  # for container metadata.
+  resourcedetection:
+    detectors: [env, system, docker]
     timeout: 2s
     override: false
 
@@ -209,30 +212,30 @@ service:
 
     metrics:
       receivers: [otlp, hostmetrics, docker_stats]
-      processors: [resource/infra, batch]
+      processors: [resourcedetection, resource/infra, batch]
       exporters: [signozclickhousemetrics]
 
     metrics/postgres:
       receivers: [postgresql]
-      processors: [resource/postgres, batch]
+      processors: [resourcedetection, resource/postgres, batch]
       exporters: [signozclickhousemetrics]
 
     metrics/redis:
       receivers: [redis]
-      processors: [resource/redis, batch]
+      processors: [resourcedetection, resource/redis, batch]
       exporters: [signozclickhousemetrics]
 
     metrics/rabbitmq:
       receivers: [rabbitmq]
-      processors: [resource/rabbitmq, batch]
+      processors: [resourcedetection, resource/rabbitmq, batch]
       exporters: [signozclickhousemetrics]
 
     metrics/aistor:
       receivers: [prometheus/aistor]
-      processors: [resource/aistor, batch]
+      processors: [resourcedetection, resource/aistor, batch]
       exporters: [signozclickhousemetrics]
 
     logs:
       receivers: [otlp, filelog/docker]
-      processors: [resourcedetection/docker, resource/infra, batch]
+      processors: [resourcedetection, resource/infra, batch]
       exporters: [clickhouselogsexporter]

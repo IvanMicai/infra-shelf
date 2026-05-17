@@ -33,18 +33,43 @@ func NewCLI(rootDir, bunPath string) *CLI {
 	}
 }
 
-func (c *CLI) Setup(ctx context.Context, appName string, services []string) (Result, error) {
+// envs holds the parsed Environment(s) form input: either a single env to
+// tag (Single) or a list to expand into siblings (Multi). At most one of
+// the two is non-empty.
+type EnvSpec struct {
+	Single string
+	Multi  []string
+}
+
+func (e EnvSpec) flags() []string {
+	if len(e.Multi) > 0 {
+		return []string{"--envs", strings.Join(e.Multi, ",")}
+	}
+	if e.Single != "" {
+		return []string{"--env", e.Single}
+	}
+	return nil
+}
+
+func (c *CLI) Setup(ctx context.Context, appName string, services []string, env EnvSpec) (Result, error) {
 	args := []string{"shelf", "setup", appName, "-s", strings.Join(services, ",")}
+	args = append(args, env.flags()...)
 	return c.run(ctx, args...)
 }
 
-func (c *CLI) Add(ctx context.Context, appName string, services []string) (Result, error) {
+func (c *CLI) Add(ctx context.Context, appName string, services []string, env EnvSpec) (Result, error) {
 	args := []string{"shelf", "add", appName, "-s", strings.Join(services, ",")}
+	args = append(args, env.flags()...)
 	return c.run(ctx, args...)
 }
 
 func (c *CLI) Remove(ctx context.Context, appName string) (Result, error) {
 	return c.run(ctx, "shelf", "remove", appName, "--force")
+}
+
+func (c *CLI) Detach(ctx context.Context, appName string, services []string) (Result, error) {
+	args := []string{"shelf", "detach", appName, "-s", strings.Join(services, ",")}
+	return c.run(ctx, args...)
 }
 
 func (c *CLI) Backup(ctx context.Context, appName string, all bool, services []string) (Result, error) {

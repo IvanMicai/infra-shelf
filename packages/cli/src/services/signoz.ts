@@ -1,9 +1,17 @@
 import type { SignozConfig } from "../lib/types";
 
-export async function provision(appName: string): Promise<SignozConfig> {
+export interface ProvisionOptions {
+  serviceName?: string;
+  environment?: string;
+}
+
+export async function provision(
+  appName: string,
+  options?: ProvisionOptions,
+): Promise<SignozConfig> {
   return {
-    serviceName: appName,
-    environment: process.env.SIGNOZ_DEFAULT_ENV ?? "dev",
+    serviceName: options?.serviceName ?? appName,
+    environment: options?.environment ?? process.env.SIGNOZ_DEFAULT_ENV ?? "dev",
   };
 }
 

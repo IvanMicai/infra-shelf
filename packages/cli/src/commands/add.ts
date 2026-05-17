@@ -21,9 +21,15 @@ const SERVICE_START_HINT: Partial<Record<ServiceName, string>> = {
   signoz: "make signoz-up",
 };
 
+export interface AddOptions {
+  envs?: string[];
+  env?: string;
+}
+
 export async function addCommand(
   appName: string,
   services: ServiceName[],
+  options?: AddOptions,
 ): Promise<void> {
   if (!appName) {
     log.error("App name is required.");
@@ -43,27 +49,27 @@ export async function addCommand(
   }
 
   const registry = await loadRegistry();
-  const app = registry.apps[appName];
-  if (!app) {
-    log.error(`App "${appName}" not found. Create it first with: bun shelf setup ${appName} -s ...`);
-    process.exit(1);
-  }
 
-  const toProvision: ServiceName[] = [];
-  for (const service of services) {
-    if (app.services[service]) {
-      log.warn(`${service} already provisioned for "${appName}" — skipping`);
-    } else {
-      toProvision.push(service);
+  // `envs` (plural) expands to existing siblings `<app>-<env>`.
+  // `env` (singular) tags a single existing app without expansion.
+  const targets: Array<{ name: string; signozServiceName: string; signozEnv?: string }> =
+    options?.envs && options.envs.length > 0
+      ? options.envs.map((env) => ({
+          name: `${appName}-${env}`,
+          signozServiceName: appName,
+          signozEnv: env,
+        }))
+      : [{ name: appName, signozServiceName: appName, signozEnv: options?.env }];
+
+  for (const target of targets) {
+    if (!registry.apps[target.name]) {
+      log.error(`App "${target.name}" not found. Create it first with: bun shelf setup ${target.name} -s ...`);
+      process.exit(1);
     }
   }
 
-  if (toProvision.length === 0) {
-    log.info("Nothing to do.");
-    return;
-  }
-
-  for (const service of toProvision) {
+  // Containers are shared across targets — check once.
+  for (const service of services) {
     const container = SERVICE_CONTAINERS[service];
     if (!(await isContainerRunning(container))) {
       const hint = SERVICE_START_HINT[service] ?? "make up";
@@ -72,53 +78,73 @@ export async function addCommand(
     }
   }
 
-  const results: string[] = [];
-
-  for (const service of toProvision) {
-    try {
-      switch (service) {
-        case "postgres": {
-          const config = await postgres.provision(appName);
-          app.services.postgres = config;
-          results.push(postgresEnv(config));
-          break;
-        }
-        case "redis": {
-          const config = await redis.provision(appName);
-          app.services.redis = config;
-          results.push(redisEnv(config));
-          break;
-        }
-        case "rabbitmq": {
-          const config = await rabbitmq.provision(appName);
-          app.services.rabbitmq = config;
-          results.push(rabbitmqEnv(config));
-          break;
-        }
-        case "aistor": {
-          const config = await aistor.provision(appName);
-          app.services.aistor = config;
-          results.push(aistorEnv(config));
-          break;
-        }
-        case "signoz": {
-          const config = await signoz.provision(appName);
-          app.services.signoz = config;
-          results.push(signozEnv(config));
-          break;
-        }
+  for (const target of targets) {
+    const app = registry.apps[target.name];
+    const toProvision: ServiceName[] = [];
+    for (const service of services) {
+      if (app.services[service]) {
+        log.warn(`${target.name}: ${service} already provisioned — skipping`);
+      } else {
+        toProvision.push(service);
       }
-      log.success(`${service} provisioned`);
-    } catch (err) {
-      log.error(`Failed to provision ${service}: ${err instanceof Error ? err.message : err}`);
-      process.exit(1);
     }
+
+    if (toProvision.length === 0) {
+      log.info(`${target.name}: nothing to do.`);
+      continue;
+    }
+
+    const results: string[] = [];
+
+    for (const service of toProvision) {
+      try {
+        switch (service) {
+          case "postgres": {
+            const config = await postgres.provision(target.name);
+            app.services.postgres = config;
+            results.push(postgresEnv(config));
+            break;
+          }
+          case "redis": {
+            const config = await redis.provision(target.name);
+            app.services.redis = config;
+            results.push(redisEnv(config));
+            break;
+          }
+          case "rabbitmq": {
+            const config = await rabbitmq.provision(target.name);
+            app.services.rabbitmq = config;
+            results.push(rabbitmqEnv(config));
+            break;
+          }
+          case "aistor": {
+            const config = await aistor.provision(target.name);
+            app.services.aistor = config;
+            results.push(aistorEnv(config));
+            break;
+          }
+          case "signoz": {
+            const config = await signoz.provision(target.name, {
+              serviceName: target.signozServiceName,
+              environment: target.signozEnv,
+            });
+            app.services.signoz = config;
+            results.push(signozEnv(config));
+            break;
+          }
+        }
+        log.success(`${target.name}: ${service} provisioned`);
+      } catch (err) {
+        log.error(`Failed to provision ${service} for ${target.name}: ${err instanceof Error ? err.message : err}`);
+        process.exit(1);
+      }
+    }
+
+    await saveRegistry(registry);
+
+    console.log("");
+    log.title(`Services attached to "${target.name}":\n`);
+    console.log(results.join("\n\n"));
+    console.log("");
   }
-
-  await saveRegistry(registry);
-
-  console.log("");
-  log.title(`Services attached to "${appName}":\n`);
-  console.log(results.join("\n\n"));
-  console.log("");
 }

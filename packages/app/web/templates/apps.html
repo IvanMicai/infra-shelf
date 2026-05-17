@@ -27,9 +27,17 @@
       App name
       <input name="app_name" placeholder="my-app" required pattern="[a-z][a-z0-9-]*">
     </label>
+    <label>
+      Environment(s) <span class="muted">(optional)</span>
+      <input name="envs" placeholder="staging  ou  staging,production" pattern="[a-z][a-z0-9-]*(,[a-z][a-z0-9-]*)*">
+    </label>
     <fieldset>
       <legend>Services</legend>
       <div class="checks">{{template "serviceChecks" .}}</div>
+    </fieldset>
+    <fieldset>
+      <legend>Addons</legend>
+      <div class="checks">{{template "addonChecks" .}}</div>
     </fieldset>
     <div class="form-actions">
       <button class="button primary" type="submit">Provision</button>

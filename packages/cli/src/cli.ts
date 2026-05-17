@@ -3,6 +3,38 @@ import type { ServiceName } from "./lib/types";
 import { log } from "./lib/output";
 
 const VALID_SERVICES = new Set(["postgres", "redis", "rabbitmq", "aistor", "signoz"]);
+const ENV_NAME_REGEX = /^[a-z][a-z0-9-]*$/;
+
+function parseEnvs(raw: string | undefined): string[] | undefined {
+  if (raw === undefined) return undefined;
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 0) {
+    log.error("--envs requires at least one environment name.");
+    process.exit(1);
+  }
+  for (const env of parts) {
+    if (!ENV_NAME_REGEX.test(env)) {
+      log.error(`Invalid env name "${env}". Use lowercase letters, numbers, and hyphens.`);
+      process.exit(1);
+    }
+  }
+  if (new Set(parts).size !== parts.length) {
+    log.error(`Duplicate envs in --envs: ${parts.join(",")}`);
+    process.exit(1);
+  }
+  return parts;
+}
+
+function parseSingleEnv(raw: string | undefined): string | undefined {
+  if (raw === undefined) return undefined;
+  const env = raw.trim();
+  if (!env) return undefined;
+  if (!ENV_NAME_REGEX.test(env)) {
+    log.error(`Invalid env name "${env}". Use lowercase letters, numbers, and hyphens.`);
+    process.exit(1);
+  }
+  return env;
+}
 
 function printUsage(): void {
   console.log(`
@@ -11,6 +43,7 @@ function printUsage(): void {
   Commands:
     setup <app>    Provision resources for an app
     add <app>      Attach more services to an existing app
+    detach <app>   Detach an addon from an app (registry-only, no teardown)
     list           List all provisioned apps
     remove <app>   Remove resources for an app
     backup <app>   Backup app data
@@ -21,7 +54,11 @@ function printUsage(): void {
   Examples:
     bun shelf setup my-app -s postgres,redis,rabbitmq,aistor,signoz
     bun shelf setup my-app -s redis --full-access
+    bun shelf setup iara -s postgres,signoz --envs staging,production
+    bun shelf setup teste5-staging -s postgres,signoz --env staging
     bun shelf add my-app -s aistor,signoz
+    bun shelf add iara -s signoz --envs staging,production
+    bun shelf add teste5-staging -s signoz --env staging
     bun shelf list --json
     bun shelf remove my-app --force
     bun shelf backup my-app
@@ -44,6 +81,8 @@ switch (command) {
       allowPositionals: true,
       options: {
         services: { type: "string", short: "s" },
+        envs: { type: "string" },
+        env: { type: "string" },
         "full-access": { type: "boolean", default: false },
       },
     });
@@ -51,6 +90,12 @@ switch (command) {
     const appName = positionals[0];
     const serviceList = values.services?.split(",") ?? [];
     const fullAccess = values["full-access"] ?? false;
+    const envs = parseEnvs(values.envs);
+    const env = parseSingleEnv(values.env);
+    if (envs && env) {
+      log.error("--envs and --env are mutually exclusive. Use --envs to expand into siblings, --env to tag a single app.");
+      process.exit(1);
+    }
 
     const invalid = serviceList.filter((s) => !VALID_SERVICES.has(s));
     if (invalid.length > 0) {
@@ -59,7 +104,7 @@ switch (command) {
     }
 
     const { setupCommand } = await import("./commands/setup");
-    await setupCommand(appName, serviceList as ServiceName[], { fullAccess });
+    await setupCommand(appName, serviceList as ServiceName[], { fullAccess, envs, env });
     break;
   }
 
@@ -69,11 +114,19 @@ switch (command) {
       allowPositionals: true,
       options: {
         services: { type: "string", short: "s" },
+        envs: { type: "string" },
+        env: { type: "string" },
       },
     });
 
     const appName = positionals[0];
     const serviceList = values.services?.split(",") ?? [];
+    const envs = parseEnvs(values.envs);
+    const env = parseSingleEnv(values.env);
+    if (envs && env) {
+      log.error("--envs and --env are mutually exclusive.");
+      process.exit(1);
+    }
 
     const invalid = serviceList.filter((s) => !VALID_SERVICES.has(s));
     if (invalid.length > 0) {
@@ -82,7 +135,7 @@ switch (command) {
     }
 
     const { addCommand } = await import("./commands/add");
-    await addCommand(appName, serviceList as ServiceName[]);
+    await addCommand(appName, serviceList as ServiceName[], { envs, env });
     break;
   }
 
@@ -96,6 +149,27 @@ switch (command) {
 
     const { listCommand } = await import("./commands/list");
     await listCommand(values.json ?? false);
+    break;
+  }
+
+  case "detach": {
+    const { values, positionals } = parseArgs({
+      args: commandArgs,
+      allowPositionals: true,
+      options: {
+        services: { type: "string", short: "s" },
+      },
+    });
+
+    const serviceList = values.services?.split(",") ?? [];
+    const invalid = serviceList.filter((s) => !VALID_SERVICES.has(s));
+    if (invalid.length > 0) {
+      log.error(`Invalid services: ${invalid.join(", ")}`);
+      process.exit(1);
+    }
+
+    const { detachCommand } = await import("./commands/detach");
+    await detachCommand(positionals[0], serviceList as ServiceName[]);
     break;
   }
 
