@@ -52,6 +52,8 @@ export async function addCommand(
 
   // `envs` (plural) expands to existing siblings `<app>-<env>`.
   // `env` (singular) tags a single existing app without expansion.
+  // When neither is given, fall back to whatever was persisted on the
+  // AppEntry at setup time — so re-attaching signoz preserves the env.
   const targets: Array<{ name: string; signozServiceName: string; signozEnv?: string }> =
     options?.envs && options.envs.length > 0
       ? options.envs.map((env) => ({
@@ -59,7 +61,15 @@ export async function addCommand(
           signozServiceName: appName,
           signozEnv: env,
         }))
-      : [{ name: appName, signozServiceName: appName, signozEnv: options?.env }];
+      : [
+          {
+            name: appName,
+            signozServiceName:
+              registry.apps[appName]?.signozServiceName ?? appName,
+            signozEnv:
+              options?.env ?? registry.apps[appName]?.environment,
+          },
+        ];
 
   for (const target of targets) {
     if (!registry.apps[target.name]) {

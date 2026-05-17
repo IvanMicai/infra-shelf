@@ -52,8 +52,12 @@ type encryptedRegistryFile struct {
 }
 
 type AppEntry struct {
-	CreatedAt string   `json:"createdAt"`
-	Services  Services `json:"services"`
+	CreatedAt string `json:"createdAt"`
+	// Set at setup time when --envs / --env is used. Survives addon
+	// detach/reattach so re-attaching SignOz via the UI preserves the env.
+	Environment       string   `json:"environment,omitempty"`
+	SignozServiceName string   `json:"signozServiceName,omitempty"`
+	Services          Services `json:"services"`
 }
 
 type Services struct {

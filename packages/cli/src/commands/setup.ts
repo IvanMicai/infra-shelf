@@ -94,6 +94,8 @@ export async function setupCommand(
   for (const target of targets) {
     registry.apps[target.name] = {
       createdAt: new Date().toISOString(),
+      environment: target.signozEnv,
+      signozServiceName: target.signozServiceName !== target.name ? target.signozServiceName : undefined,
       services: {},
     };
 

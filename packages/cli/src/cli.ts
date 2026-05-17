@@ -41,15 +41,23 @@ function printUsage(): void {
   Usage: bun shelf <command> [options]
 
   Commands:
-    setup <app>    Provision resources for an app
-    add <app>      Attach more services to an existing app
-    detach <app>   Detach an addon from an app (registry-only, no teardown)
-    list           List all provisioned apps
-    remove <app>   Remove resources for an app
-    backup <app>   Backup app data
-    restore <app>  Restore app data from backup
-    status         Show infrastructure container status
-    registry       Registry maintenance
+    setup <app>         Provision resources for an app
+    add <app>           Attach more services to an existing app
+    detach <app>        Detach an addon from an app (registry-only)
+    list                List all provisioned apps
+    credentials <app>   Print .env block for an app
+    remove <app>        Remove resources for an app
+    backup <app>        Backup app data
+    backup delete       Delete a backup file
+    restore <app>       Restore app data from backup
+    start               Start infrastructure (docker compose up -d)
+    status              Show infrastructure container status
+    schedule list       List backup schedules (shared with web UI)
+    schedule create     Create a schedule (--cron, -s services, ...)
+    schedule pause      Pause a schedule by id
+    schedule resume     Resume a schedule by id
+    schedule delete     Delete a schedule by id
+    registry            Registry maintenance
 
   Examples:
     bun shelf setup my-app -s postgres,redis,rabbitmq,aistor,signoz
@@ -187,7 +195,26 @@ switch (command) {
     break;
   }
 
+  case "start": {
+    const { startCommand } = await import("./commands/start");
+    await startCommand(commandArgs);
+    break;
+  }
+
+  case "credentials": {
+    const { credentialsCommand } = await import("./commands/credentials");
+    await credentialsCommand(commandArgs[0]);
+    break;
+  }
+
   case "backup": {
+    // Subcommand `backup delete <app> <file>` for symmetric file management.
+    if (commandArgs[0] === "delete") {
+      const { backupDeleteCommand } = await import("./commands/backup-delete");
+      await backupDeleteCommand(commandArgs[1], commandArgs[2]);
+      break;
+    }
+
     const { values, positionals } = parseArgs({
       args: commandArgs,
       allowPositionals: true,
@@ -238,6 +265,57 @@ switch (command) {
       values.file,
       values.force ?? false,
     );
+    break;
+  }
+
+  case "schedule": {
+    const sub = commandArgs[0];
+    const mod = await import("./commands/schedule");
+    switch (sub) {
+      case "list":
+        await mod.scheduleListCommand();
+        break;
+      case "create": {
+        const { values, positionals } = parseArgs({
+          args: commandArgs.slice(1),
+          allowPositionals: true,
+          options: {
+            cron: { type: "string" },
+            timezone: { type: "string", short: "z" },
+            services: { type: "string", short: "s" },
+            "retention-days": { type: "string" },
+            "retention-count": { type: "string" },
+            disabled: { type: "boolean", default: false },
+          },
+        });
+        await mod.scheduleCreateCommand({
+          appName: positionals[0],
+          cronExpr: values.cron ?? "",
+          timezone: values.timezone,
+          services: values.services?.split(",").filter(Boolean),
+          retentionDays: values["retention-days"]
+            ? Number(values["retention-days"])
+            : undefined,
+          retentionCount: values["retention-count"]
+            ? Number(values["retention-count"])
+            : undefined,
+          enabled: !values.disabled,
+        });
+        break;
+      }
+      case "pause":
+        await mod.schedulePauseCommand(Number(commandArgs[1]));
+        break;
+      case "resume":
+        await mod.scheduleResumeCommand(Number(commandArgs[1]));
+        break;
+      case "delete":
+        await mod.scheduleDeleteCommand(Number(commandArgs[1]));
+        break;
+      default:
+        log.error("Unknown schedule subcommand. Use: list | create | pause | resume | delete");
+        process.exit(1);
+    }
     break;
   }
 
