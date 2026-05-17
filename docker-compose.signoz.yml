@@ -136,6 +136,11 @@ services:
         condition: service_healthy
       signoz:
         condition: service_healthy
+    # Grant access to /var/run/docker.sock (owned by group 999 on the TrueNAS
+    # host). Without this the `resourcedetection` processor's `docker`
+    # detector fails with "permission denied" and crashes the pipeline.
+    group_add:
+      - "999"
     environment:
       OTEL_RESOURCE_ATTRIBUTES: host.name=infra-signoz-otel-collector,os.type=linux
       LOW_CARDINAL_EXCEPTION_GROUPING: "false"
