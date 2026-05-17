@@ -1,6 +1,7 @@
-.PHONY: up down restart status logs logs-% reset clean network app dev app-build app-logs help
+.PHONY: up down restart status logs logs-% reset clean network app dev app-build app-logs signoz-up signoz-down signoz-restart signoz-logs signoz-status up-all help
 
 ENV_FILE ?= .env
+SIGNOZ_COMPOSE := -f docker-compose.yml -f docker-compose.signoz.yml
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -49,3 +50,27 @@ app-build: ## Rebuild the web interface image
 
 app-logs: ## Tail web interface logs
 	docker compose --env-file $(ENV_FILE) logs -f app
+
+signoz-up: ## Start SignOz observability stack (clickhouse + collector + UI)
+	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) up -d \
+		signoz-zookeeper signoz-clickhouse \
+		signoz-schema-migrator-sync signoz-schema-migrator-async \
+		signoz signoz-otel-collector
+
+signoz-down: ## Stop SignOz observability stack
+	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) stop \
+		signoz-otel-collector signoz signoz-clickhouse signoz-zookeeper
+
+signoz-restart: ## Restart SignOz observability stack
+	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) restart \
+		signoz-otel-collector signoz signoz-clickhouse signoz-zookeeper
+
+signoz-logs: ## Tail collector + server logs
+	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) logs -f \
+		signoz-otel-collector signoz
+
+signoz-status: ## Show SignOz container status
+	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) ps
+
+up-all: ## Start core stack + SignOz
+	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) up -d

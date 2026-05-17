@@ -6,6 +6,8 @@ services:
     image: postgres:17-alpine
     container_name: infra-postgres
     restart: unless-stopped
+    labels:
+      infra-shelf.observe: "true"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -24,6 +26,8 @@ services:
     image: redis:7-alpine
     container_name: infra-redis
     restart: unless-stopped
+    labels:
+      infra-shelf.observe: "true"
     command: sh -c "test -f /data/users.acl || echo 'user default on >${REDIS_PASSWORD} ~* &* +@all' > /data/users.acl; redis-server --aclfile /data/users.acl"
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD}
@@ -39,9 +43,13 @@ services:
 
   # ─── RabbitMQ ──────────────────────────────────────────────
   rabbitmq:
-    image: rabbitmq:3-alpine
+    # Management plugin habilitado pra que o receiver `rabbitmq` do OTel
+    # collector consiga consultar a Management HTTP API em :15672.
+    image: rabbitmq:3-management-alpine
     container_name: infra-rabbitmq
     restart: unless-stopped
+    labels:
+      infra-shelf.observe: "true"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
@@ -61,12 +69,17 @@ services:
     image: quay.io/minio/aistor/minio:latest
     container_name: infra-aistor
     restart: unless-stopped
+    labels:
+      infra-shelf.observe: "true"
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${AISTOR_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${AISTOR_ROOT_PASSWORD}
       MINIO_LICENSE: ${AISTOR_LICENSE:-}
       MINIO_SUBNET_API_KEY: ${AISTOR_SUBNET_API_KEY:-}
+      # Expoe /minio/v2/metrics/{cluster,node,bucket} sem token pro
+      # prometheus receiver do collector. Outras rotas seguem autenticadas.
+      MINIO_PROMETHEUS_AUTH_TYPE: public
     volumes:
       - ${DATA_DIR:-./data}/aistor:/data
     ports:
@@ -89,6 +102,8 @@ services:
       dockerfile: Dockerfile
     container_name: infra-shelf-app
     restart: unless-stopped
+    labels:
+      infra-shelf.observe: "true"
     environment:
       APP_ADDR: 0.0.0.0:8080
       APP_USERNAME: ${APP_USERNAME:-admin}

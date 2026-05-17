@@ -1,0 +1,165 @@
+name: infra-shelf
+
+# SignOz observability stack — opt-in via `make signoz-up` or `make up-all`.
+# Reuses the `infra` network from docker-compose.yml so apps + infra containers
+# can reach signoz-otel-collector by hostname.
+#
+# Versions track SignOz v0.55 community. Upgrade by bumping the SIGNOZ_VERSION
+# vars in .env and reading the SignOz release notes for breaking changes.
+
+services:
+  signoz-zookeeper:
+    # Bitnami movou tags antigas para bitnamilegacy; usamos os env vars
+    # bitnami-style (ZOO_SERVER_ID, ALLOW_ANONYMOUS_LOGIN) — ficar com a
+    # imagem deles é mais simples que migrar pra `zookeeper:3.9` oficial.
+    image: bitnamilegacy/zookeeper:3.9.3-debian-12-r22
+    container_name: infra-signoz-zookeeper
+    restart: unless-stopped
+    user: root
+    environment:
+      ZOO_SERVER_ID: "1"
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOO_AUTOPURGE_INTERVAL: "1"
+    volumes:
+      - ${DATA_DIR:-./data}/signoz/zookeeper:/bitnami/zookeeper
+    networks:
+      - infra
+
+  signoz-clickhouse:
+    # Must match SignOz server requirements. v0.124+ uses the
+    # `output_format_native_write_json_as_string` setting added in CH 25.x.
+    image: clickhouse/clickhouse-server:25.8-alpine
+    container_name: infra-signoz-clickhouse
+    restart: unless-stopped
+    tty: true
+    depends_on:
+      - signoz-zookeeper
+    environment:
+      CLICKHOUSE_USER: ${SIGNOZ_CLICKHOUSE_USER:-signoz}
+      CLICKHOUSE_PASSWORD: ${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz}
+    volumes:
+      - ${DATA_DIR:-./data}/signoz/clickhouse:/var/lib/clickhouse
+      - ./signoz/clickhouse-cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./signoz/clickhouse-users-signoz.xml:/etc/clickhouse-server/users.d/signoz.xml:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "0.0.0.0:8123/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - infra
+
+  # One-shot migrators create signoz_traces / signoz_metrics / signoz_logs
+  # databases + tables in ClickHouse. The unified signoz binary and the
+  # otel-collector both assume those schemas already exist.
+  signoz-schema-migrator-sync:
+    image: signoz/signoz-schema-migrator:v0.144.4
+    container_name: infra-signoz-schema-migrator-sync
+    command:
+      - sync
+      - --dsn=tcp://${SIGNOZ_CLICKHOUSE_USER:-signoz}:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz}@signoz-clickhouse:9000
+      - --up=
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - infra
+
+  signoz-schema-migrator-async:
+    image: signoz/signoz-schema-migrator:v0.144.4
+    container_name: infra-signoz-schema-migrator-async
+    command:
+      - async
+      - --dsn=tcp://${SIGNOZ_CLICKHOUSE_USER:-signoz}:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz}@signoz-clickhouse:9000
+      - --up=
+    depends_on:
+      signoz-schema-migrator-sync:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - infra
+
+  # Unified SignOz server (UI + API + opamp + alertmanager) — v0.122+
+  # consolida query-service
+  # e frontend numa imagem só. Anteriormente eram dois containers; as imagens
+  # signoz/query-service:latest e signoz/frontend:latest eram variantes
+  # enterprise (MSK) com nginx capado.
+  signoz:
+    # `signoz/signoz` é a build Enterprise (pede licença ativa). A OSS
+    # community fica em signoz/signoz-community — mesmo binário sem o EE.
+    image: signoz/signoz-community:v0.124.0
+    container_name: infra-signoz
+    restart: unless-stopped
+    command:
+      - server
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+      signoz-schema-migrator-sync:
+        condition: service_completed_successfully
+    environment:
+      SIGNOZ_INSTRUMENTATION_LOGS_LEVEL: info
+      SIGNOZ_TOKENIZER_JWT_SECRET: ${SIGNOZ_JWT_SECRET:-change-me-please-please}
+      SIGNOZ_SQLSTORE_SQLITE_PATH: /var/lib/signoz/signoz.db
+      SIGNOZ_TELEMETRYSTORE_PROVIDER: clickhouse
+      SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN: tcp://${SIGNOZ_CLICKHOUSE_USER:-signoz}:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz}@signoz-clickhouse:9000
+      DEPLOYMENT_TYPE: docker-standalone-amd
+      GODEBUG: netdns=go
+    volumes:
+      - ${DATA_DIR:-./data}/signoz/sqlite:/var/lib/signoz
+    ports:
+      - "${SIGNOZ_UI_PORT:-3301}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - infra
+
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:v0.144.4
+    container_name: infra-signoz-otel-collector
+    restart: unless-stopped
+    command:
+      - --config=/etc/otel-collector-config.yaml
+      - --manager-config=/etc/manager-config.yaml
+      - --copy-path=/var/tmp/collector-config.yaml
+    depends_on:
+      signoz-clickhouse:
+        condition: service_healthy
+      signoz:
+        condition: service_healthy
+    environment:
+      OTEL_RESOURCE_ATTRIBUTES: host.name=infra-signoz-otel-collector,os.type=linux
+      LOW_CARDINAL_EXCEPTION_GROUPING: "false"
+      DEPLOYMENT_ENV: ${SIGNOZ_DEFAULT_ENV:-dev}
+      CLICKHOUSE_DSN: tcp://${SIGNOZ_CLICKHOUSE_USER:-signoz}:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz}@signoz-clickhouse:9000
+      # Credenciais dos datastores — receivers leem via ${env:VAR}.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - ./signoz/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./signoz/otel-collector-opamp-config.yaml:/etc/manager-config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /:/hostfs:ro
+    ports:
+      - "${SIGNOZ_OTLP_GRPC_PORT:-4317}:4317"
+      - "${SIGNOZ_OTLP_HTTP_PORT:-4318}:4318"
+    networks:
+      - infra
+
+networks:
+  infra:
+    name: ${INFRA_NETWORK_NAME:-infra-shelf}
+    driver: bridge

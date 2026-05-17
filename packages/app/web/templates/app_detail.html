@@ -44,7 +44,7 @@
   </div>
   <form method="post" action="/apps/{{.App.Name}}/backup" class="inline-form">
     <div class="checks">
-      {{range .App.ServiceNames}}
+      {{range .App.BackupableServiceNames}}
       <label class="check"><input type="checkbox" name="services" value="{{.}}" checked> {{serviceLabel .}}</label>
       {{end}}
     </div>

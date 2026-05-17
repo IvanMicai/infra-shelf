@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 import type { ServiceName } from "./lib/types";
 import { log } from "./lib/output";
 
-const VALID_SERVICES = new Set(["postgres", "redis", "rabbitmq", "aistor"]);
+const VALID_SERVICES = new Set(["postgres", "redis", "rabbitmq", "aistor", "signoz"]);
 
 function printUsage(): void {
   console.log(`
@@ -19,9 +19,9 @@ function printUsage(): void {
     registry       Registry maintenance
 
   Examples:
-    bun shelf setup my-app -s postgres,redis,rabbitmq,aistor
+    bun shelf setup my-app -s postgres,redis,rabbitmq,aistor,signoz
     bun shelf setup my-app -s redis --full-access
-    bun shelf add my-app -s aistor
+    bun shelf add my-app -s aistor,signoz
     bun shelf list --json
     bun shelf remove my-app --force
     bun shelf backup my-app
@@ -54,7 +54,7 @@ switch (command) {
 
     const invalid = serviceList.filter((s) => !VALID_SERVICES.has(s));
     if (invalid.length > 0) {
-      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor`);
+      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor, signoz`);
       process.exit(1);
     }
 
@@ -77,7 +77,7 @@ switch (command) {
 
     const invalid = serviceList.filter((s) => !VALID_SERVICES.has(s));
     if (invalid.length > 0) {
-      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor`);
+      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor, signoz`);
       process.exit(1);
     }
 
@@ -126,7 +126,7 @@ switch (command) {
     const serviceList = values.services?.split(",") ?? [];
     const invalid = serviceList.filter((s) => s && !VALID_SERVICES.has(s));
     if (invalid.length > 0) {
-      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor`);
+      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor, signoz`);
       process.exit(1);
     }
 
@@ -153,7 +153,7 @@ switch (command) {
     const serviceList = values.services?.split(",") ?? [];
     const invalid = serviceList.filter((s) => s && !VALID_SERVICES.has(s));
     if (invalid.length > 0) {
-      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor`);
+      log.error(`Invalid services: ${invalid.join(", ")}. Valid: postgres, redis, rabbitmq, aistor, signoz`);
       process.exit(1);
     }
 

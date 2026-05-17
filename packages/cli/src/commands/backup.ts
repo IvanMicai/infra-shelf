@@ -16,6 +16,7 @@ const SERVICE_CONTAINERS: Record<ServiceName, string> = {
   redis: "infra-redis",
   rabbitmq: "infra-rabbitmq",
   aistor: "infra-aistor",
+  signoz: "infra-signoz-otel-collector",
 };
 
 const SERVICE_EXT: Record<ServiceName, string> = {
@@ -23,7 +24,12 @@ const SERVICE_EXT: Record<ServiceName, string> = {
   redis: "json",
   rabbitmq: "json",
   aistor: "tar",
+  signoz: "",
 };
+
+// SignOz is a shared observability backend with no per-app data — backup
+// is intentionally a no-op (telemetry rolls over in ClickHouse).
+const NON_BACKUPABLE: ReadonlySet<ServiceName> = new Set(["signoz"]);
 
 function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
@@ -41,9 +47,11 @@ async function backupApp(
     process.exit(1);
   }
 
-  const provisionedServices = Object.keys(app.services) as ServiceName[];
+  const provisionedServices = (Object.keys(app.services) as ServiceName[]).filter(
+    (s) => !NON_BACKUPABLE.has(s),
+  );
   const targetServices = services?.length
-    ? services.filter((s) => provisionedServices.includes(s))
+    ? services.filter((s) => provisionedServices.includes(s) && !NON_BACKUPABLE.has(s))
     : provisionedServices;
 
   if (targetServices.length === 0) {

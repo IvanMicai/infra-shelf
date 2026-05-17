@@ -1,0 +1,238 @@
+receivers:
+  # OTLP from apps (gRPC + HTTP). Apps point here via OTEL_EXPORTER_OTLP_ENDPOINT.
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Container stdout/stderr logs via Docker's json-file driver.
+  # The include_file_path attribute holds the container ID; we enrich and
+  # filter so only containers labeled `infra-shelf.observe=true` flow through.
+  filelog/docker:
+    include:
+      - /var/lib/docker/containers/*/*-json.log
+    start_at: end
+    include_file_path: true
+    include_file_name: false
+    operators:
+      - type: json_parser
+        id: parser-docker
+        timestamp:
+          parse_from: attributes.time
+          layout: "%Y-%m-%dT%H:%M:%S.%LZ"
+      - type: regex_parser
+        id: extract_container_id
+        regex: '^/var/lib/docker/containers/(?P<container_id>[a-f0-9]+)/'
+        parse_from: attributes["log.file.path"]
+      - type: move
+        from: attributes.log
+        to: body
+      - type: move
+        from: attributes.stream
+        to: attributes["log.iostream"]
+      - type: remove
+        field: attributes.time
+
+  # Per-container CPU/RAM/IO. Pulls metrics from the docker socket.
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+    timeout: 20s
+    api_version: "1.41"
+    metrics:
+      container.cpu.usage.percpu:
+        enabled: true
+      container.network.io.usage.tx_dropped:
+        enabled: true
+      container.network.io.usage.rx_dropped:
+        enabled: true
+      container.network.io.usage.tx_packets:
+        enabled: true
+      container.network.io.usage.rx_packets:
+        enabled: true
+
+  # Host metrics. Mount `/:/hostfs:ro` in the collector and set root_path.
+  # On macOS the values are from the container's view (Linux VM), not the
+  # Mac itself — acceptable; on TrueNAS this reflects the real host.
+  hostmetrics:
+    collection_interval: 30s
+    root_path: /hostfs
+    scrapers:
+      cpu: {}
+      load: {}
+      memory: {}
+      disk: {}
+      filesystem: {}
+      network: {}
+      paging: {}
+
+  # ───── Datastore-level metrics ─────
+  # Service-level metrics (queries/sec, queue depth, cache hit ratio, ...)
+  # complement docker_stats which only shows container CPU/RAM.
+
+  postgresql:
+    endpoint: infra-postgres:5432
+    transport: tcp
+    username: ${env:POSTGRES_USER}
+    password: ${env:POSTGRES_PASSWORD}
+    databases:
+      - postgres
+    collection_interval: 30s
+    tls:
+      insecure: true
+
+  redis:
+    endpoint: infra-redis:6379
+    password: ${env:REDIS_PASSWORD}
+    collection_interval: 30s
+
+  rabbitmq:
+    endpoint: http://infra-rabbitmq:15672
+    username: ${env:RABBITMQ_DEFAULT_USER}
+    password: ${env:RABBITMQ_DEFAULT_PASS}
+    collection_interval: 30s
+
+  prometheus/aistor:
+    config:
+      scrape_configs:
+        - job_name: aistor-cluster
+          scrape_interval: 30s
+          metrics_path: /minio/v2/metrics/cluster
+          static_configs:
+            - targets: ['infra-aistor:9000']
+        - job_name: aistor-node
+          scrape_interval: 30s
+          metrics_path: /minio/v2/metrics/node
+          static_configs:
+            - targets: ['infra-aistor:9000']
+        - job_name: aistor-bucket
+          scrape_interval: 60s
+          metrics_path: /minio/v2/metrics/bucket
+          static_configs:
+            - targets: ['infra-aistor:9000']
+
+processors:
+  batch:
+    send_batch_size: 10000
+    send_batch_max_size: 11000
+    timeout: 10s
+
+  # Stamp signoz-shipped telemetry with deployment.environment from the env.
+  resource/infra:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOYMENT_ENV}
+        action: upsert
+      - key: service.namespace
+        value: infra-shelf
+        action: upsert
+
+  # Container logs arrive without a service.name — derive one from the
+  # docker container name (which is itself derived from the container label
+  # we attach in docker-compose.yml).
+  resourcedetection/docker:
+    detectors: [env, system]
+    timeout: 2s
+    override: false
+
+  # Tag each datastore's metrics with a stable service.name so they appear
+  # as discrete services in the SignOz UI.
+  resource/postgres:
+    attributes:
+      - key: service.name
+        value: infra-postgres
+        action: upsert
+      - key: service.namespace
+        value: infra-shelf
+        action: upsert
+      - key: deployment.environment
+        value: ${env:DEPLOYMENT_ENV}
+        action: upsert
+
+  resource/redis:
+    attributes:
+      - key: service.name
+        value: infra-redis
+        action: upsert
+      - key: service.namespace
+        value: infra-shelf
+        action: upsert
+      - key: deployment.environment
+        value: ${env:DEPLOYMENT_ENV}
+        action: upsert
+
+  resource/rabbitmq:
+    attributes:
+      - key: service.name
+        value: infra-rabbitmq
+        action: upsert
+      - key: service.namespace
+        value: infra-shelf
+        action: upsert
+      - key: deployment.environment
+        value: ${env:DEPLOYMENT_ENV}
+        action: upsert
+
+  resource/aistor:
+    attributes:
+      - key: service.name
+        value: infra-aistor
+        action: upsert
+      - key: service.namespace
+        value: infra-shelf
+        action: upsert
+      - key: deployment.environment
+        value: ${env:DEPLOYMENT_ENV}
+        action: upsert
+
+exporters:
+  clickhousetraces:
+    datasource: ${env:CLICKHOUSE_DSN}/?database=signoz_traces
+    low_cardinal_exception_grouping: ${env:LOW_CARDINAL_EXCEPTION_GROUPING}
+
+  signozclickhousemetrics:
+    dsn: ${env:CLICKHOUSE_DSN}/signoz_metrics
+    timeout: 15s
+
+  clickhouselogsexporter:
+    dsn: ${env:CLICKHOUSE_DSN}/
+    timeout: 10s
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resource/infra, batch]
+      exporters: [clickhousetraces]
+
+    metrics:
+      receivers: [otlp, hostmetrics, docker_stats]
+      processors: [resource/infra, batch]
+      exporters: [signozclickhousemetrics]
+
+    metrics/postgres:
+      receivers: [postgresql]
+      processors: [resource/postgres, batch]
+      exporters: [signozclickhousemetrics]
+
+    metrics/redis:
+      receivers: [redis]
+      processors: [resource/redis, batch]
+      exporters: [signozclickhousemetrics]
+
+    metrics/rabbitmq:
+      receivers: [rabbitmq]
+      processors: [resource/rabbitmq, batch]
+      exporters: [signozclickhousemetrics]
+
+    metrics/aistor:
+      receivers: [prometheus/aistor]
+      processors: [resource/aistor, batch]
+      exporters: [signozclickhousemetrics]
+
+    logs:
+      receivers: [otlp, filelog/docker]
+      processors: [resourcedetection/docker, resource/infra, batch]
+      exporters: [clickhouselogsexporter]

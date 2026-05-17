@@ -16,7 +16,10 @@ const SERVICE_CONTAINERS: Record<ServiceName, string> = {
   redis: "infra-redis",
   rabbitmq: "infra-rabbitmq",
   aistor: "infra-aistor",
+  signoz: "infra-signoz-otel-collector",
 };
+
+const NON_RESTORABLE: ReadonlySet<ServiceName> = new Set(["signoz"]);
 
 function detectService(fileName: string): ServiceName | null {
   if (fileName.startsWith("postgres_")) return "postgres";
@@ -122,9 +125,11 @@ export async function restoreCommand(
   }
 
   // Restore latest backups for each service
-  const provisionedServices = Object.keys(app.services) as ServiceName[];
+  const provisionedServices = (Object.keys(app.services) as ServiceName[]).filter(
+    (s) => !NON_RESTORABLE.has(s),
+  );
   const targetServices = services?.length
-    ? services.filter((s) => provisionedServices.includes(s))
+    ? services.filter((s) => provisionedServices.includes(s) && !NON_RESTORABLE.has(s))
     : provisionedServices;
 
   const appDir = resolve(BACKUPS_DIR, appName);

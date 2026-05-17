@@ -3,6 +3,7 @@ import type {
   RedisConfig,
   RabbitmqConfig,
   AistorConfig,
+  SignozConfig,
 } from "./types";
 
 const green = (s: string) => `\x1b[32m${s}\x1b[0m`;
@@ -76,5 +77,19 @@ export function aistorEnv(config: AistorConfig): string {
     `AWS_ACCESS_KEY_ID=${config.accessKey}`,
     `AWS_SECRET_ACCESS_KEY=${config.secretKey}`,
     `AWS_REGION=us-east-1`,
+  ].join("\n");
+}
+
+export function signozEnv(config: SignozConfig): string {
+  const attrs = `service.name=${config.serviceName},service.namespace=infra-shelf,deployment.environment=${config.environment}`;
+  return [
+    `# === SignOz (OpenTelemetry) ===`,
+    `OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317`,
+    `OTEL_EXPORTER_OTLP_PROTOCOL=grpc`,
+    `OTEL_SERVICE_NAME=${config.serviceName}`,
+    `OTEL_RESOURCE_ATTRIBUTES=${attrs}`,
+    `OTEL_TRACES_EXPORTER=otlp`,
+    `OTEL_METRICS_EXPORTER=otlp`,
+    `OTEL_LOGS_EXPORTER=otlp`,
   ].join("\n");
 }

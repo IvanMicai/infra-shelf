@@ -1,5 +1,5 @@
 import { isContainerRunning } from "../lib/docker";
-import { log, postgresEnv, redisEnv, rabbitmqEnv, aistorEnv } from "../lib/output";
+import { log, postgresEnv, redisEnv, rabbitmqEnv, aistorEnv, signozEnv } from "../lib/output";
 import { loadRegistry, saveRegistry } from "../lib/registry";
 import type { ServiceName } from "../lib/types";
 import { validateAppName } from "../lib/validate";
@@ -7,12 +7,18 @@ import * as postgres from "../services/postgres";
 import * as redis from "../services/redis";
 import * as rabbitmq from "../services/rabbitmq";
 import * as aistor from "../services/aistor";
+import * as signoz from "../services/signoz";
 
 const SERVICE_CONTAINERS: Record<ServiceName, string> = {
   postgres: "infra-postgres",
   redis: "infra-redis",
   rabbitmq: "infra-rabbitmq",
   aistor: "infra-aistor",
+  signoz: "infra-signoz-otel-collector",
+};
+
+const SERVICE_START_HINT: Partial<Record<ServiceName, string>> = {
+  signoz: "make signoz-up",
 };
 
 export async function setupCommand(
@@ -48,7 +54,8 @@ export async function setupCommand(
   for (const service of services) {
     const container = SERVICE_CONTAINERS[service];
     if (!(await isContainerRunning(container))) {
-      log.error(`Container "${container}" is not running. Start it with: make up`);
+      const hint = SERVICE_START_HINT[service] ?? "make up";
+      log.error(`Container "${container}" is not running. Start it with: ${hint}`);
       process.exit(1);
     }
   }
@@ -85,6 +92,12 @@ export async function setupCommand(
           const config = await aistor.provision(appName);
           registry.apps[appName].services.aistor = config;
           results.push(aistorEnv(config));
+          break;
+        }
+        case "signoz": {
+          const config = await signoz.provision(appName);
+          registry.apps[appName].services.signoz = config;
+          results.push(signozEnv(config));
           break;
         }
       }

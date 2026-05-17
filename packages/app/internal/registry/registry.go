@@ -26,6 +26,7 @@ const (
 	Redis    ServiceName = "redis"
 	RabbitMQ ServiceName = "rabbitmq"
 	AIStor   ServiceName = "aistor"
+	Signoz   ServiceName = "signoz"
 )
 
 var ValidServices = map[string]ServiceName{
@@ -33,6 +34,7 @@ var ValidServices = map[string]ServiceName{
 	"redis":    Redis,
 	"rabbitmq": RabbitMQ,
 	"aistor":   AIStor,
+	"signoz":   Signoz,
 }
 
 type Registry struct {
@@ -59,6 +61,7 @@ type Services struct {
 	Redis    *RedisConfig    `json:"redis,omitempty"`
 	RabbitMQ *RabbitMQConfig `json:"rabbitmq,omitempty"`
 	AIStor   *AIStorConfig   `json:"aistor,omitempty"`
+	Signoz   *SignozConfig   `json:"signoz,omitempty"`
 }
 
 type PostgresConfig struct {
@@ -86,6 +89,11 @@ type AIStorConfig struct {
 	Endpoint  string `json:"endpoint"`
 }
 
+type SignozConfig struct {
+	ServiceName string `json:"serviceName"`
+	Environment string `json:"environment"`
+}
+
 type Store struct {
 	Path string
 }
@@ -108,15 +116,17 @@ type ServiceInfo struct {
 	BackupGlob  string
 	BackupHow   string
 	RestoreNote string
+	Backupable  bool
 }
 
-var serviceCatalog = []ServiceName{Postgres, Redis, RabbitMQ, AIStor}
+var serviceCatalog = []ServiceName{Postgres, Redis, RabbitMQ, AIStor, Signoz}
 
 var serviceLabels = map[ServiceName]string{
 	Postgres: "PostgreSQL",
 	Redis:    "Redis",
 	RabbitMQ: "RabbitMQ",
 	AIStor:   "AIStor",
+	Signoz:   "SignOz",
 }
 
 var serviceBackupHow = map[ServiceName]string{
@@ -124,6 +134,7 @@ var serviceBackupHow = map[ServiceName]string{
 	Redis:    "Snapshot logico via Lua: itera KEYS '<app>:*' e serializa strings/hashes/lists/sets/zsets em JSON; restore reescreve as chaves.",
 	RabbitMQ: "rabbitmqctl export_definitions filtrado pelo vhost — somente definicoes (queues/exchanges/bindings/policies/users). Mensagens em flight NAO sao salvas.",
 	AIStor:   "mc mirror local/<bucket> para diretorio temporario + tar streaming — preserva todos os objetos. Restore extrai o tar e roda mc mirror --overwrite --remove para refletir o estado do snapshot.",
+	Signoz:   "Sem backup per-app — telemetria fica no ClickHouse compartilhado e expira pela retention policy do SignOz.",
 }
 
 var serviceRestoreNote = map[ServiceName]string{
@@ -131,6 +142,7 @@ var serviceRestoreNote = map[ServiceName]string{
 	Redis:    "Le o JSON e aplica SET/HSET/RPUSH/SADD/ZADD por chave; nao apaga chaves nao presentes no snapshot.",
 	RabbitMQ: "rabbitmqctl import_definitions re-cria objetos do vhost (idempotente).",
 	AIStor:   "Sobrescreve o bucket inteiro com o conteudo do tar (--remove apaga objetos que sumiram entre os pontos no tempo).",
+	Signoz:   "—",
 }
 
 var serviceBackupGlob = map[ServiceName]string{
@@ -138,6 +150,11 @@ var serviceBackupGlob = map[ServiceName]string{
 	Redis:    "redis_<ts>.json",
 	RabbitMQ: "rabbitmq_<ts>.json",
 	AIStor:   "aistor_<ts>.tar",
+	Signoz:   "",
+}
+
+var nonBackupable = map[ServiceName]bool{
+	Signoz: true,
 }
 
 func NewStore(path string) *Store {
@@ -339,6 +356,8 @@ func (a App) hasService(name ServiceName) bool {
 		return a.Entry.Services.RabbitMQ != nil
 	case AIStor:
 		return a.Entry.Services.AIStor != nil
+	case Signoz:
+		return a.Entry.Services.Signoz != nil
 	}
 	return false
 }
@@ -371,13 +390,14 @@ func (a App) ServiceInfos() []ServiceInfo {
 			BackupGlob:  serviceBackupGlob[s],
 			BackupHow:   serviceBackupHow[s],
 			RestoreNote: serviceRestoreNote[s],
+			Backupable:  !nonBackupable[s],
 		})
 	}
 	return infos
 }
 
 func (a App) ServiceNames() []string {
-	names := make([]string, 0, 4)
+	names := make([]string, 0, 5)
 	if a.Entry.Services.Postgres != nil {
 		names = append(names, string(Postgres))
 	}
@@ -389,6 +409,19 @@ func (a App) ServiceNames() []string {
 	}
 	if a.Entry.Services.AIStor != nil {
 		names = append(names, string(AIStor))
+	}
+	if a.Entry.Services.Signoz != nil {
+		names = append(names, string(Signoz))
+	}
+	return names
+}
+
+func (a App) BackupableServiceNames() []string {
+	names := make([]string, 0, 4)
+	for _, n := range a.ServiceNames() {
+		if !nonBackupable[ServiceName(n)] {
+			names = append(names, n)
+		}
 	}
 	return names
 }
@@ -414,6 +447,9 @@ func (a App) EnvBlocks() []EnvBlock {
 	}
 	if cfg := a.Entry.Services.AIStor; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "AIStor", Body: aistorEnv(*cfg)})
+	}
+	if cfg := a.Entry.Services.Signoz; cfg != nil {
+		blocks = append(blocks, EnvBlock{Service: "SignOz", Body: signozEnv(*cfg)})
 	}
 	return blocks
 }
@@ -460,6 +496,23 @@ func rabbitMQEnv(cfg RabbitMQConfig) string {
 		fmt.Sprintf("RABBITMQ_USERNAME=%s", cfg.Username),
 		fmt.Sprintf("RABBITMQ_PASSWORD=%s", cfg.Password),
 		fmt.Sprintf("RABBITMQ_VHOST=%s", cfg.Vhost),
+	}, "\n")
+}
+
+func signozEnv(cfg SignozConfig) string {
+	attrs := fmt.Sprintf(
+		"service.name=%s,service.namespace=infra-shelf,deployment.environment=%s",
+		cfg.ServiceName, cfg.Environment,
+	)
+	return strings.Join([]string{
+		"# === SignOz (OpenTelemetry) ===",
+		"OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317",
+		"OTEL_EXPORTER_OTLP_PROTOCOL=grpc",
+		fmt.Sprintf("OTEL_SERVICE_NAME=%s", cfg.ServiceName),
+		fmt.Sprintf("OTEL_RESOURCE_ATTRIBUTES=%s", attrs),
+		"OTEL_TRACES_EXPORTER=otlp",
+		"OTEL_METRICS_EXPORTER=otlp",
+		"OTEL_LOGS_EXPORTER=otlp",
 	}, "\n")
 }
 

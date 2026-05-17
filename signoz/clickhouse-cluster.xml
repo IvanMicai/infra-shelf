@@ -1,0 +1,31 @@
+<!-- Minimal single-node "cluster" topology + ZooKeeper pointer.
+
+     The SignOz schema migrator assumes a cluster named `cluster` and runs
+     `CREATE DATABASE ... ON CLUSTER`, which needs a ZooKeeper for the DDL
+     coordination queue. We point at the same `signoz-zookeeper` container
+     that's already up. Single shard + single replica = local-only operation. -->
+<clickhouse>
+  <remote_servers>
+    <cluster>
+      <shard>
+        <replica>
+          <host>signoz-clickhouse</host>
+          <port>9000</port>
+          <user>signoz</user>
+          <password>signoz</password>
+        </replica>
+      </shard>
+    </cluster>
+  </remote_servers>
+
+  <zookeeper>
+    <node>
+      <host>signoz-zookeeper</host>
+      <port>2181</port>
+    </node>
+  </zookeeper>
+
+  <distributed_ddl>
+    <path>/clickhouse/task_queue/ddl</path>
+  </distributed_ddl>
+</clickhouse>

@@ -14,17 +14,18 @@ make up
 
 ## Serviços
 
-| Serviço    | Acesso (rede Docker)  | Isolamento por app             |
-|------------|-----------------------|--------------------------------|
-| PostgreSQL | `postgres:5432`       | Database + user dedicado       |
-| Redis      | `redis:6379`          | ACL user + prefixo de chave    |
-| RabbitMQ   | `rabbitmq:5672`       | Vhost + user dedicado          |
-| AIStor     | `aistor:9000`         | Bucket + access key dedicada   |
+| Serviço    | Acesso (rede Docker)              | Isolamento por app                       |
+|------------|-----------------------------------|------------------------------------------|
+| PostgreSQL | `postgres:5432`                   | Database + user dedicado                 |
+| Redis      | `redis:6379`                      | ACL user + prefixo de chave              |
+| RabbitMQ   | `rabbitmq:5672`                   | Vhost + user dedicado                    |
+| AIStor     | `aistor:9000`                     | Bucket + access key dedicada             |
+| SignOz     | `signoz-otel-collector:4317/4318` | `service.name` + resource attributes     |
 
 ## CLI
 
 ```bash
-bun shelf setup meu-app -s postgres,redis,rabbitmq,aistor   # Provisionar
+bun shelf setup meu-app -s postgres,redis,rabbitmq,aistor,signoz   # Provisionar
 bun shelf list                                         # Listar apps
 bun shelf list --json                                  # Listar em JSON
 bun shelf backup meu-app                               # Backup
@@ -162,6 +163,15 @@ AWS_ENDPOINT_URL=http://aistor:9000
 AWS_ACCESS_KEY_ID=meu-app
 AWS_SECRET_ACCESS_KEY=nOpQrStU
 AWS_REGION=us-east-1
+
+# === SignOz (OpenTelemetry) ===
+OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+OTEL_SERVICE_NAME=meu-app
+OTEL_RESOURCE_ATTRIBUTES=service.name=meu-app,service.namespace=infra-shelf,deployment.environment=dev
+OTEL_TRACES_EXPORTER=otlp
+OTEL_METRICS_EXPORTER=otlp
+OTEL_LOGS_EXPORTER=otlp
 ```
 
 ## Conectar Outros Projetos
@@ -182,6 +192,20 @@ networks:
 ```
 
 Os hostnames `postgres`, `redis` e `rabbitmq` são resolvidos automaticamente dentro da rede Docker.
+
+## Observabilidade (SignOz)
+
+Stack opt-in pra logs, traces e metricas centralizados. Ver detalhes em [`signoz/README.md`](signoz/README.md).
+
+```bash
+make signoz-up           # liga clickhouse + collector + UI (~1min no primeiro boot)
+open http://localhost:3301
+bun shelf setup obs-test -s postgres,signoz   # provisiona com bloco OTEL pronto
+```
+
+Apps colam o bloco `# === SignOz (OpenTelemetry) ===` no `.env` e qualquer SDK OTel padrao (Python, Node, Go) detecta automaticamente o endpoint `http://signoz-otel-collector:4317`. Logs stdout dos containers `infra-*` ja sao coletados via collector (filtro por label `infra-shelf.observe=true`); metricas de container e do host tambem.
+
+SignOz nao tem backup per-app — telemetria fica no ClickHouse compartilhado e expira pela retention policy configurada na UI.
 
 ## Comandos Make
 

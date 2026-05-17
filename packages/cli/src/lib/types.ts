@@ -1,4 +1,4 @@
-export type ServiceName = "postgres" | "redis" | "rabbitmq" | "aistor";
+export type ServiceName = "postgres" | "redis" | "rabbitmq" | "aistor" | "signoz";
 
 export interface PostgresConfig {
   database: string;
@@ -25,6 +25,11 @@ export interface AistorConfig {
   endpoint: string;
 }
 
+export interface SignozConfig {
+  serviceName: string;
+  environment: string;
+}
+
 export interface AppEntry {
   createdAt: string;
   services: {
@@ -32,6 +37,7 @@ export interface AppEntry {
     redis?: RedisConfig;
     rabbitmq?: RabbitmqConfig;
     aistor?: AistorConfig;
+    signoz?: SignozConfig;
   };
 }
 

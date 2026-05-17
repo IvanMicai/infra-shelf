@@ -1,0 +1,16 @@
+# Minimal prometheus config consumed by signoz-query-service. We don't run
+# prometheus itself — query-service uses this file to learn about remote
+# read targets and alertmanager. Leaving scrape_configs empty is fine; all
+# metrics arrive via OTLP through the collector → ClickHouse path.
+
+global:
+  scrape_interval: 60s
+  evaluation_interval: 60s
+
+scrape_configs: []
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - signoz-alertmanager:9093

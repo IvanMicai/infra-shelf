@@ -1,0 +1,15 @@
+<!-- Profile overrides for SignOz. Mounted at users.d/ so it merges
+     over the default profile defined in users.xml. Schema migrator
+     uses experimental JSON columns (since v0.144), which require an
+     explicit opt-in flag in ClickHouse 24.x. -->
+<clickhouse>
+  <profiles>
+    <default>
+      <allow_experimental_json_type>1</allow_experimental_json_type>
+      <allow_experimental_object_type>1</allow_experimental_object_type>
+      <allow_suspicious_low_cardinality_types>1</allow_suspicious_low_cardinality_types>
+      <allow_experimental_dynamic_type>1</allow_experimental_dynamic_type>
+      <allow_experimental_variant_type>1</allow_experimental_variant_type>
+    </default>
+  </profiles>
+</clickhouse>
