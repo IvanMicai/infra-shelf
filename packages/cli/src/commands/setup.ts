@@ -1,6 +1,7 @@
 import { isContainerRunning } from "../lib/docker";
 import { log, postgresEnv, redisEnv, rabbitmqEnv, aistorEnv, signozEnv } from "../lib/output";
 import { loadRegistry, saveRegistry } from "../lib/registry";
+import { buildSetupTargets } from "../lib/targets";
 import type { ServiceName } from "../lib/types";
 import { validateAppName } from "../lib/validate";
 import * as postgres from "../services/postgres";
@@ -52,18 +53,7 @@ export async function setupCommand(
     process.exit(1);
   }
 
-  // Targets describe the (possibly multiple) app rows we'll create.
-  // - `envs` (plural) → expand into siblings `<app>-<env>`.
-  // - `env` (singular) → tag-only on a single app (no name change).
-  // - neither → single app, default env.
-  const targets: Array<{ name: string; signozServiceName: string; signozEnv?: string }> =
-    options?.envs && options.envs.length > 0
-      ? options.envs.map((env) => ({
-          name: `${appName}-${env}`,
-          signozServiceName: appName,
-          signozEnv: env,
-        }))
-      : [{ name: appName, signozServiceName: appName, signozEnv: options?.env }];
+  const targets = buildSetupTargets(appName, options);
 
   const registry = await loadRegistry();
 

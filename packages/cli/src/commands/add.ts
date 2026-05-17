@@ -1,6 +1,7 @@
 import { isContainerRunning } from "../lib/docker";
 import { log, postgresEnv, redisEnv, rabbitmqEnv, aistorEnv, signozEnv } from "../lib/output";
 import { loadRegistry, saveRegistry } from "../lib/registry";
+import { buildAddTargets } from "../lib/targets";
 import type { ServiceName } from "../lib/types";
 import { validateAppName } from "../lib/validate";
 import * as postgres from "../services/postgres";
@@ -50,26 +51,7 @@ export async function addCommand(
 
   const registry = await loadRegistry();
 
-  // `envs` (plural) expands to existing siblings `<app>-<env>`.
-  // `env` (singular) tags a single existing app without expansion.
-  // When neither is given, fall back to whatever was persisted on the
-  // AppEntry at setup time — so re-attaching signoz preserves the env.
-  const targets: Array<{ name: string; signozServiceName: string; signozEnv?: string }> =
-    options?.envs && options.envs.length > 0
-      ? options.envs.map((env) => ({
-          name: `${appName}-${env}`,
-          signozServiceName: appName,
-          signozEnv: env,
-        }))
-      : [
-          {
-            name: appName,
-            signozServiceName:
-              registry.apps[appName]?.signozServiceName ?? appName,
-            signozEnv:
-              options?.env ?? registry.apps[appName]?.environment,
-          },
-        ];
+  const targets = buildAddTargets(appName, options, registry);
 
   for (const target of targets) {
     if (!registry.apps[target.name]) {

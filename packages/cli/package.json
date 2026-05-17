@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "bun test test/unit test/integration",
+    "test:unit": "bun test test/unit",
+    "test:integration": "bun test test/integration",
+    "test:e2e": "INFRA_SHELF_E2E=1 bun test test/e2e",
+    "test:all": "INFRA_SHELF_E2E=1 bun test test/",
+    "test:coverage": "bun test --coverage test/unit test/integration"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   }

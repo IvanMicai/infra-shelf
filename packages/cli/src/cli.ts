@@ -1,39 +1,27 @@
 import { parseArgs } from "node:util";
 import type { ServiceName } from "./lib/types";
 import { log } from "./lib/output";
+import { parseEnvs as parseEnvsLib, parseSingleEnv as parseSingleEnvLib } from "./lib/envs";
 
 const VALID_SERVICES = new Set(["postgres", "redis", "rabbitmq", "aistor", "signoz"]);
-const ENV_NAME_REGEX = /^[a-z][a-z0-9-]*$/;
 
+// Thin wrappers turning the lib's `throw` into a CLI-style log+exit.
 function parseEnvs(raw: string | undefined): string[] | undefined {
-  if (raw === undefined) return undefined;
-  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  if (parts.length === 0) {
-    log.error("--envs requires at least one environment name.");
+  try {
+    return parseEnvsLib(raw);
+  } catch (err) {
+    log.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
-  for (const env of parts) {
-    if (!ENV_NAME_REGEX.test(env)) {
-      log.error(`Invalid env name "${env}". Use lowercase letters, numbers, and hyphens.`);
-      process.exit(1);
-    }
-  }
-  if (new Set(parts).size !== parts.length) {
-    log.error(`Duplicate envs in --envs: ${parts.join(",")}`);
-    process.exit(1);
-  }
-  return parts;
 }
 
 function parseSingleEnv(raw: string | undefined): string | undefined {
-  if (raw === undefined) return undefined;
-  const env = raw.trim();
-  if (!env) return undefined;
-  if (!ENV_NAME_REGEX.test(env)) {
-    log.error(`Invalid env name "${env}". Use lowercase letters, numbers, and hyphens.`);
+  try {
+    return parseSingleEnvLib(raw);
+  } catch (err) {
+    log.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
-  return env;
 }
 
 function printUsage(): void {
