@@ -203,12 +203,31 @@ exporters:
     dsn: ${env:CLICKHOUSE_DSN}/
     timeout: 10s
 
+# Connectors bridge two pipelines: signozspanmetrics consumes spans from the
+# traces pipeline and emits signoz_latency / signoz_calls_total metrics that
+# power SigNoz's Services tab (otherwise it 500s looking for those metrics).
+connectors:
+  signozspanmetrics/cumulative:
+    dimensions:
+      - name: service.namespace
+        default: default
+      - name: deployment.environment
+        default: default
+      - name: signoz.collector.id
+    dimensions_cache_size: 100000
+    aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
+    metrics_flush_interval: 60s
+
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [resource/infra, batch]
-      exporters: [clickhousetraces]
+      exporters: [clickhousetraces, signozspanmetrics/cumulative]
+
+    metrics/spanmetrics:
+      receivers: [signozspanmetrics/cumulative]
+      exporters: [signozclickhousemetrics]
 
     metrics:
       receivers: [otlp, hostmetrics, docker_stats]
