@@ -26,12 +26,12 @@ services:
       - infra
 
   signoz-clickhouse:
-    # Pinned to ClickHouse 24.8 LTS (latest patch), debian variant.
-    # 25.x (alpine: 25.8, 25.5.6, 25.3.14; debian: 25.3.14) all
-    # crashed — alpine builds segfaulted in shared_ptr destructors
-    # in SystemLog/MetricLog; debian build failed the runtime
-    # integrity check on startup. 24.8 is pre-SystemLog refactor.
-    image: clickhouse/clickhouse-server:24.8.14.39
+    # Trying ClickHouse 25.1.8 (earliest 25.x patch) — 24.8 is
+    # stable but missing `output_format_native_write_json_as_string`
+    # which SigNoz v0.124 requires (added in 25.1). Later 25.x
+    # (25.3, 25.5, 25.8) all crashed with SystemLog SIGSEGV on
+    # this host — testing whether the regression was already in 25.1.
+    image: clickhouse/clickhouse-server:25.1.8.25
     container_name: infra-signoz-clickhouse
     restart: unless-stopped
     tty: true
