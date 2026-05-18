@@ -26,12 +26,12 @@ services:
       - infra
 
   signoz-clickhouse:
-    # Pinned to ClickHouse 25.3 LTS (latest patch).
-    # 25.5.6 (SigNoz upstream's pin) segfaulted in
-    # MetricLog::savingThreadFunction; 25.8 segfaulted in
-    # SerializationSparse merges. 25.3-lts is the closest
-    # long-term-supported branch to what SigNoz tests.
-    image: clickhouse/clickhouse-server:25.3.14.14-alpine
+    # Pinned to ClickHouse 25.3 LTS (latest patch), debian variant.
+    # Earlier alpine pins (25.8, 25.5.6, 25.3.14) all segfaulted in
+    # shared_ptr destructors (__on_zero_shared), often in
+    # MetricLog::savingThreadFunction. Trying debian to rule out
+    # musl/alpine as the culprit.
+    image: clickhouse/clickhouse-server:25.3.14.14
     container_name: infra-signoz-clickhouse
     restart: unless-stopped
     tty: true
