@@ -1,0 +1,10 @@
+# Runtime state — not needed inside the image (mounted as volumes).
+data/
+backups/
+.env
+.env.*
+
+# Misc
+.git/
+node_modules/
+*.log
