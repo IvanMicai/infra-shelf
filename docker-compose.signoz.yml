@@ -26,12 +26,12 @@ services:
       - infra
 
   signoz-clickhouse:
-    # Pinned to ClickHouse 25.3 LTS (latest patch), debian variant.
-    # Earlier alpine pins (25.8, 25.5.6, 25.3.14) all segfaulted in
-    # shared_ptr destructors (__on_zero_shared), often in
-    # MetricLog::savingThreadFunction. Trying debian to rule out
-    # musl/alpine as the culprit.
-    image: clickhouse/clickhouse-server:25.3.14.14
+    # Pinned to ClickHouse 24.8 LTS (latest patch), debian variant.
+    # 25.x (alpine: 25.8, 25.5.6, 25.3.14; debian: 25.3.14) all
+    # crashed — alpine builds segfaulted in shared_ptr destructors
+    # in SystemLog/MetricLog; debian build failed the runtime
+    # integrity check on startup. 24.8 is pre-SystemLog refactor.
+    image: clickhouse/clickhouse-server:24.8.14.39
     container_name: infra-signoz-clickhouse
     restart: unless-stopped
     tty: true
