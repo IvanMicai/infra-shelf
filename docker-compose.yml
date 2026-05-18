@@ -135,6 +135,36 @@ services:
     networks:
       - infra
 
+  # ─── Reconcile (one-shot) ──────────────────────────────────
+  # Reaplica vhosts/users/perms registrados em data/apps.json contra os
+  # containers. Resgata o estado quando um volume é perdido (server reset,
+  # delete acidental). Roda em todo `docker compose up` depois que postgres
+  # e rabbitmq estão healthy, executa o binário shelf da mesma imagem do app
+  # e sai. Idempotente — sem-op se tudo já estiver consistente.
+  reconcile:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: infra-shelf-app
+    container_name: infra-shelf-reconcile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/usr/local/bin/shelf"]
+    command: ["reconcile"]
+    environment:
+      INFRA_SHELF_ROOT: /workspace
+      INFRA_SHELF_REGISTRY_PATH: /workspace/data/apps.json
+      INFRA_SHELF_SECRET: ${INFRA_SHELF_SECRET:-}
+    volumes:
+      - ./:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - infra
+
 # ─── Network ──────────────────────────────────────────────
 networks:
   infra:

@@ -27,6 +27,7 @@ func NewRootCmd() *cobra.Command {
 		commands.NewStatusCmd(),
 		commands.NewScheduleCmd(),
 		commands.NewRegistryCmd(),
+		commands.NewReconcileCmd(),
 	)
 
 	return root

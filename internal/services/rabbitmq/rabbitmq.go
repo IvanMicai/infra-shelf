@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ivan/infra-shelf/internal/docker"
 	"github.com/ivan/infra-shelf/internal/passwordgen"
@@ -119,6 +120,72 @@ func Restore(ctx context.Context, _ string, srcPath string) error {
 		return fmt.Errorf("rabbitmqctl import failed: %w", err)
 	}
 	return nil
+}
+
+// Ensure idempotently re-applies vhost/user/perms for an existing app entry.
+// Used by reconcile loop after the rabbitmq volume is lost: vhost is created
+// if missing, user has its password reset to the registered one, perms are
+// re-applied (rabbitmqctl set_permissions overwrites). Safe to call repeatedly.
+func Ensure(ctx context.Context, cfg registry.RabbitMQConfig) error {
+	if cfg.Vhost == "" || cfg.Username == "" || cfg.Password == "" {
+		return fmt.Errorf("rabbitmq ensure: incomplete config (vhost=%q user=%q)", cfg.Vhost, cfg.Username)
+	}
+
+	// vhost: idempotent — `add_vhost` on existing vhost is a no-op (rabbit
+	// returns success). Use list_vhosts to be safe across rabbit versions.
+	vhosts, err := docker.Exec(ctx, Container, "rabbitmqctl", "list_vhosts", "--no-table-headers")
+	if err != nil {
+		return fmt.Errorf("rabbitmq ensure: list_vhosts: %w", err)
+	}
+	if !containsLine(vhosts, cfg.Vhost) {
+		if _, err := docker.Exec(ctx, Container, "rabbitmqctl", "add_vhost", cfg.Vhost); err != nil {
+			return fmt.Errorf("rabbitmq ensure: add_vhost %q: %w", cfg.Vhost, err)
+		}
+	}
+
+	// user: create if missing, otherwise reset password to the registered value.
+	users, err := docker.Exec(ctx, Container, "rabbitmqctl", "list_users", "--no-table-headers")
+	if err != nil {
+		return fmt.Errorf("rabbitmq ensure: list_users: %w", err)
+	}
+	if !containsUser(users, cfg.Username) {
+		if _, err := docker.Exec(ctx, Container, "rabbitmqctl", "add_user", cfg.Username, cfg.Password); err != nil {
+			return fmt.Errorf("rabbitmq ensure: add_user %q: %w", cfg.Username, err)
+		}
+	} else {
+		if _, err := docker.Exec(ctx, Container, "rabbitmqctl", "change_password", cfg.Username, cfg.Password); err != nil {
+			return fmt.Errorf("rabbitmq ensure: change_password %q: %w", cfg.Username, err)
+		}
+	}
+
+	// perms + tags: set_* overwrites, always safe.
+	if _, err := docker.Exec(ctx, Container, "rabbitmqctl", "set_permissions", "-p", cfg.Vhost, cfg.Username, ".*", ".*", ".*"); err != nil {
+		return fmt.Errorf("rabbitmq ensure: set_permissions: %w", err)
+	}
+	if _, err := docker.Exec(ctx, Container, "rabbitmqctl", "set_user_tags", cfg.Username, "management"); err != nil {
+		return fmt.Errorf("rabbitmq ensure: set_user_tags: %w", err)
+	}
+	return nil
+}
+
+func containsLine(out, target string) bool {
+	for _, line := range strings.Split(out, "\n") {
+		if strings.TrimSpace(line) == target {
+			return true
+		}
+	}
+	return false
+}
+
+// rabbitmqctl list_users emits "<name>\t[tag,...]" — match on the first field.
+func containsUser(out, target string) bool {
+	for _, line := range strings.Split(out, "\n") {
+		name := strings.TrimSpace(strings.SplitN(line, "\t", 2)[0])
+		if name == target {
+			return true
+		}
+	}
+	return false
 }
 
 func Teardown(ctx context.Context, appName string) error {
