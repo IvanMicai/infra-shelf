@@ -26,10 +26,12 @@ services:
       - infra
 
   signoz-clickhouse:
-    # Pinned to the version SignOz v0.124 tests against upstream.
-    # 25.8.x has a known SIGSEGV in background merges
-    # (SerializationSparse __on_zero_shared).
-    image: clickhouse/clickhouse-server:25.5.6-alpine
+    # Pinned to ClickHouse 25.3 LTS (latest patch).
+    # 25.5.6 (SigNoz upstream's pin) segfaulted in
+    # MetricLog::savingThreadFunction; 25.8 segfaulted in
+    # SerializationSparse merges. 25.3-lts is the closest
+    # long-term-supported branch to what SigNoz tests.
+    image: clickhouse/clickhouse-server:25.3.14.14-alpine
     container_name: infra-signoz-clickhouse
     restart: unless-stopped
     tty: true
