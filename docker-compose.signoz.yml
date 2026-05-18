@@ -26,9 +26,10 @@ services:
       - infra
 
   signoz-clickhouse:
-    # Must match SignOz server requirements. v0.124+ uses the
-    # `output_format_native_write_json_as_string` setting added in CH 25.x.
-    image: clickhouse/clickhouse-server:25.8-alpine
+    # Pinned to the version SignOz v0.124 tests against upstream.
+    # 25.8.x has a known SIGSEGV in background merges
+    # (SerializationSparse __on_zero_shared).
+    image: clickhouse/clickhouse-server:25.5.6-alpine
     container_name: infra-signoz-clickhouse
     restart: unless-stopped
     tty: true
