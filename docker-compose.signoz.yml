@@ -26,12 +26,15 @@ services:
       - infra
 
   signoz-clickhouse:
-    # Trying ClickHouse 25.1.8 (earliest 25.x patch) — 24.8 is
-    # stable but missing `output_format_native_write_json_as_string`
-    # which SigNoz v0.124 requires (added in 25.1). Later 25.x
-    # (25.3, 25.5, 25.8) all crashed with SystemLog SIGSEGV on
-    # this host — testing whether the regression was already in 25.1.
-    image: clickhouse/clickhouse-server:25.1.8.25
+    # Pinned to ClickHouse 26.3 LTS (latest patch).
+    # All 25.x patches we tried crashed with __on_zero_shared in
+    # SystemLog::savingThreadFunction. 24.8 was stable but missing
+    # `output_format_native_write_json_as_string` (added 25.1) and
+    # `secondary_indices_enable_bulk_filtering` (added 25.5) which
+    # SigNoz v0.124 requires. 26.3 LTS has both settings and is
+    # the next LTS after 25.x — testing if the SystemLog regression
+    # was fixed upstream.
+    image: clickhouse/clickhouse-server:26.3.10.62
     container_name: infra-signoz-clickhouse
     restart: unless-stopped
     tty: true
