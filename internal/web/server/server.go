@@ -821,6 +821,8 @@ func serviceLabel(service string) string {
 		return "RabbitMQ"
 	case "aistor":
 		return "AIStor"
+	case "mongodb":
+		return "MongoDB"
 	case "signoz":
 		return "SignOz"
 	default:

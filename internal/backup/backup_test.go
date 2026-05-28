@@ -7,6 +7,23 @@ import (
 	"time"
 )
 
+func TestDetectService(t *testing.T) {
+	cases := map[string]string{
+		"postgres_20260517T193045.sql":    "postgres",
+		"redis_20260517T193045.json":      "redis",
+		"rabbitmq_20260517T193045.json":   "rabbitmq",
+		"aistor_20260517T193045.tar":      "aistor",
+		"mongodb_20260517T193045.archive": "mongodb",
+		"mongodb_20260517T193045.tar":     "", // wrong extension
+		"unknown_20260517T193045.bin":     "",
+	}
+	for name, want := range cases {
+		if got := DetectService(name); got != want {
+			t.Errorf("DetectService(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
 func TestPruneByDaysAndCount(t *testing.T) {
 	dir := t.TempDir()
 	appDir := filepath.Join(dir, "demo")
