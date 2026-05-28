@@ -11,6 +11,7 @@ import (
 	"github.com/ivan/infra-shelf/internal/docker"
 	"github.com/ivan/infra-shelf/internal/registry"
 	"github.com/ivan/infra-shelf/internal/services/aistor"
+	"github.com/ivan/infra-shelf/internal/services/mongodb"
 	"github.com/ivan/infra-shelf/internal/services/postgres"
 	"github.com/ivan/infra-shelf/internal/services/rabbitmq"
 	"github.com/ivan/infra-shelf/internal/services/redis"
@@ -111,7 +112,7 @@ func (e *Engine) RestoreFromFile(ctx context.Context, appName, filePath string) 
 	fileName := filepath.Base(resolved)
 	svc := detectService(fileName)
 	if svc == "" {
-		return fmt.Errorf("cannot detect service from filename %q (expected postgres_*, redis_*, rabbitmq_*, aistor_*)", fileName)
+		return fmt.Errorf("cannot detect service from filename %q (expected postgres_*, redis_*, rabbitmq_*, aistor_*, mongodb_*)", fileName)
 	}
 
 	if !docker.IsContainerRunning(ctx, serviceContainer[svc]) {
@@ -135,12 +136,14 @@ func runRestore(ctx context.Context, svc, appName, file string) error {
 		return rabbitmq.Restore(ctx, appName, file)
 	case "aistor":
 		return aistor.Restore(ctx, appName, file)
+	case "mongodb":
+		return mongodb.Restore(ctx, appName, file)
 	}
 	return fmt.Errorf("unknown service: %s", svc)
 }
 
 func detectService(fileName string) string {
-	for _, svc := range []string{"postgres", "redis", "rabbitmq", "aistor"} {
+	for _, svc := range []string{"postgres", "redis", "rabbitmq", "aistor", "mongodb"} {
 		if strings.HasPrefix(fileName, svc+"_") {
 			return svc
 		}

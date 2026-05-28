@@ -20,12 +20,13 @@ make up
 | Redis      | `redis:6379`                      | ACL user + prefixo de chave              |
 | RabbitMQ   | `rabbitmq:5672`                   | Vhost + user dedicado                    |
 | AIStor     | `aistor:9000`                     | Bucket + access key dedicada             |
+| MongoDB    | `mongodb:27017`                   | Database + user dedicado                 |
 | SignOz     | `signoz-otel-collector:4317/4318` | `service.name` + resource attributes     |
 
 ## CLI
 
 ```bash
-./shelf setup meu-app -s postgres,redis,rabbitmq,aistor,signoz   # Provisionar
+./shelf setup meu-app -s postgres,redis,rabbitmq,aistor,mongodb,signoz   # Provisionar
 ./shelf list                                         # Listar apps
 ./shelf list --json                                  # Listar em JSON
 ./shelf backup meu-app                               # Backup
@@ -153,6 +154,14 @@ AWS_ACCESS_KEY_ID=meu-app
 AWS_SECRET_ACCESS_KEY=nOpQrStU
 AWS_REGION=us-east-1
 
+# === MongoDB ===
+MONGODB_URL=mongodb://meu-app:vWxYzAbC@mongodb:27017/meu-app?authSource=meu-app
+MONGODB_HOST=mongodb
+MONGODB_PORT=27017
+MONGODB_USERNAME=meu-app
+MONGODB_PASSWORD=vWxYzAbC
+MONGODB_DATABASE=meu-app
+
 # === SignOz (OpenTelemetry) ===
 OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
 OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -180,7 +189,7 @@ networks:
     external: true
 ```
 
-Os hostnames `postgres`, `redis` e `rabbitmq` são resolvidos automaticamente dentro da rede Docker.
+Os hostnames `postgres`, `redis`, `rabbitmq` e `mongodb` são resolvidos automaticamente dentro da rede Docker.
 
 ## Observabilidade (SignOz)
 
@@ -222,7 +231,7 @@ cmd/
 internal/
   shelfcore/     # API compartilhada entre CLI e web (Setup/Add/Backup/...)
   registry/      # apps.json + cripto AES-256-GCM
-  services/      # postgres / redis / rabbitmq / aistor / signoz
+  services/      # postgres / redis / rabbitmq / aistor / mongodb / signoz
   cli/           # comandos cobra
   web/           # handlers, scheduler, backupservice, assets
   backup/  config/  docker/  envspec/  output/  passwordgen/  s3backup/

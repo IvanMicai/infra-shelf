@@ -7,18 +7,20 @@ import (
 	"github.com/ivan/infra-shelf/internal/docker"
 	"github.com/ivan/infra-shelf/internal/registry"
 	"github.com/ivan/infra-shelf/internal/services/aistor"
+	"github.com/ivan/infra-shelf/internal/services/mongodb"
 	"github.com/ivan/infra-shelf/internal/services/postgres"
 	"github.com/ivan/infra-shelf/internal/services/rabbitmq"
 	"github.com/ivan/infra-shelf/internal/services/redis"
 )
 
 // serviceContainer maps each provisionable service to the container name where
-// its admin tooling (psql, redis-cli, rabbitmqctl, mc) lives.
+// its admin tooling (psql, redis-cli, rabbitmqctl, mc, mongosh) lives.
 var serviceContainer = map[string]string{
 	"postgres": postgres.Container,
 	"redis":    redis.Container,
 	"rabbitmq": rabbitmq.Container,
 	"aistor":   aistor.Container,
+	"mongodb":  mongodb.Container,
 	"signoz":   "infra-signoz-otel-collector",
 }
 
@@ -68,6 +70,8 @@ func teardownService(ctx context.Context, svc string, appName string) error {
 		return rabbitmq.Teardown(ctx, appName)
 	case "aistor":
 		return aistor.Teardown(ctx, appName)
+	case "mongodb":
+		return mongodb.Teardown(ctx, appName)
 	case "signoz":
 		return nil
 	}
@@ -88,6 +92,9 @@ func setServiceConfig(entry *registry.AppEntry, svc string, cfg any) {
 	case "aistor":
 		c := cfg.(registry.AIStorConfig)
 		entry.Services.AIStor = &c
+	case "mongodb":
+		c := cfg.(registry.MongoDBConfig)
+		entry.Services.MongoDB = &c
 	case "signoz":
 		c := cfg.(registry.SignozConfig)
 		entry.Services.Signoz = &c
@@ -104,6 +111,8 @@ func clearServiceConfig(entry *registry.AppEntry, svc string) {
 		entry.Services.RabbitMQ = nil
 	case "aistor":
 		entry.Services.AIStor = nil
+	case "mongodb":
+		entry.Services.MongoDB = nil
 	case "signoz":
 		entry.Services.Signoz = nil
 	}
@@ -119,6 +128,8 @@ func hasService(entry registry.AppEntry, svc string) bool {
 		return entry.Services.RabbitMQ != nil
 	case "aistor":
 		return entry.Services.AIStor != nil
+	case "mongodb":
+		return entry.Services.MongoDB != nil
 	case "signoz":
 		return entry.Services.Signoz != nil
 	}
@@ -137,6 +148,8 @@ func provisionService(ctx context.Context, svc string, appName string, opts prov
 		return rabbitmq.Provision(ctx, appName)
 	case "aistor":
 		return aistor.Provision(ctx, appName)
+	case "mongodb":
+		return mongodb.Provision(ctx, appName)
 	case "signoz":
 		return signozProvision(appName, opts), nil
 	}

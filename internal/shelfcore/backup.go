@@ -11,6 +11,7 @@ import (
 	"github.com/ivan/infra-shelf/internal/docker"
 	"github.com/ivan/infra-shelf/internal/registry"
 	"github.com/ivan/infra-shelf/internal/services/aistor"
+	"github.com/ivan/infra-shelf/internal/services/mongodb"
 	"github.com/ivan/infra-shelf/internal/services/postgres"
 	"github.com/ivan/infra-shelf/internal/services/rabbitmq"
 	"github.com/ivan/infra-shelf/internal/services/redis"
@@ -21,6 +22,7 @@ var serviceExt = map[string]string{
 	"redis":    "json",
 	"rabbitmq": "json",
 	"aistor":   "tar",
+	"mongodb":  "archive",
 }
 
 type BackupFile struct {
@@ -170,6 +172,8 @@ func runBackup(ctx context.Context, svc, appName, filePath string) error {
 		return rabbitmq.Backup(ctx, appName, filePath)
 	case "aistor":
 		return aistor.Backup(ctx, appName, filePath)
+	case "mongodb":
+		return mongodb.Backup(ctx, appName, filePath)
 	}
 	return fmt.Errorf("%w: %s", ErrNonBackupable, svc)
 }

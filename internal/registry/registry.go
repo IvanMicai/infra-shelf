@@ -26,6 +26,7 @@ const (
 	Redis    ServiceName = "redis"
 	RabbitMQ ServiceName = "rabbitmq"
 	AIStor   ServiceName = "aistor"
+	MongoDB  ServiceName = "mongodb"
 	Signoz   ServiceName = "signoz"
 )
 
@@ -34,6 +35,7 @@ var ValidServices = map[string]ServiceName{
 	"redis":    Redis,
 	"rabbitmq": RabbitMQ,
 	"aistor":   AIStor,
+	"mongodb":  MongoDB,
 	"signoz":   Signoz,
 }
 
@@ -65,6 +67,7 @@ type Services struct {
 	Redis    *RedisConfig    `json:"redis,omitempty"`
 	RabbitMQ *RabbitMQConfig `json:"rabbitmq,omitempty"`
 	AIStor   *AIStorConfig   `json:"aistor,omitempty"`
+	MongoDB  *MongoDBConfig  `json:"mongodb,omitempty"`
 	Signoz   *SignozConfig   `json:"signoz,omitempty"`
 }
 
@@ -91,6 +94,12 @@ type AIStorConfig struct {
 	AccessKey string `json:"accessKey"`
 	SecretKey string `json:"secretKey"`
 	Endpoint  string `json:"endpoint"`
+}
+
+type MongoDBConfig struct {
+	Database string `json:"database"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type SignozConfig struct {
@@ -124,13 +133,14 @@ type ServiceInfo struct {
 	IsAddon     bool
 }
 
-var serviceCatalog = []ServiceName{Postgres, Redis, RabbitMQ, AIStor, Signoz}
+var serviceCatalog = []ServiceName{Postgres, Redis, RabbitMQ, AIStor, MongoDB, Signoz}
 
 var serviceLabels = map[ServiceName]string{
 	Postgres: "PostgreSQL",
 	Redis:    "Redis",
 	RabbitMQ: "RabbitMQ",
 	AIStor:   "AIStor",
+	MongoDB:  "MongoDB",
 	Signoz:   "SignOz",
 }
 
@@ -139,6 +149,7 @@ var serviceBackupHow = map[ServiceName]string{
 	Redis:    "Snapshot logico via Lua: itera KEYS '<app>:*' e serializa strings/hashes/lists/sets/zsets em JSON; restore reescreve as chaves.",
 	RabbitMQ: "rabbitmqctl export_definitions filtrado pelo vhost — somente definicoes (queues/exchanges/bindings/policies/users). Mensagens em flight NAO sao salvas.",
 	AIStor:   "mc mirror local/<bucket> para diretorio temporario + tar streaming — preserva todos os objetos. Restore extrai o tar e roda mc mirror --overwrite --remove para refletir o estado do snapshot.",
+	MongoDB:  "mongodump --archive --gzip do database dedicado — captura collections, documentos e indices. Restore drop-and-reimport via mongorestore --drop.",
 	Signoz:   "Sem backup per-app — telemetria fica no ClickHouse compartilhado e expira pela retention policy do SignOz.",
 }
 
@@ -147,6 +158,7 @@ var serviceRestoreNote = map[ServiceName]string{
 	Redis:    "Le o JSON e aplica SET/HSET/RPUSH/SADD/ZADD por chave; nao apaga chaves nao presentes no snapshot.",
 	RabbitMQ: "rabbitmqctl import_definitions re-cria objetos do vhost (idempotente).",
 	AIStor:   "Sobrescreve o bucket inteiro com o conteudo do tar (--remove apaga objetos que sumiram entre os pontos no tempo).",
+	MongoDB:  "mongorestore --archive --gzip --drop reimporta o database; cada collection do snapshot e dropada e recriada (idempotente). O user do app e reaplicado pelo reconcile, nao pelo restore.",
 	Signoz:   "—",
 }
 
@@ -155,6 +167,7 @@ var serviceBackupGlob = map[ServiceName]string{
 	Redis:    "redis_<ts>.json",
 	RabbitMQ: "rabbitmq_<ts>.json",
 	AIStor:   "aistor_<ts>.tar",
+	MongoDB:  "mongodb_<ts>.archive",
 	Signoz:   "",
 }
 
@@ -369,6 +382,8 @@ func (a App) hasService(name ServiceName) bool {
 		return a.Entry.Services.RabbitMQ != nil
 	case AIStor:
 		return a.Entry.Services.AIStor != nil
+	case MongoDB:
+		return a.Entry.Services.MongoDB != nil
 	case Signoz:
 		return a.Entry.Services.Signoz != nil
 	}
@@ -446,7 +461,7 @@ func (a App) AddonInfos() []ServiceInfo {
 }
 
 func (a App) ServiceNames() []string {
-	names := make([]string, 0, 5)
+	names := make([]string, 0, 6)
 	if a.Entry.Services.Postgres != nil {
 		names = append(names, string(Postgres))
 	}
@@ -459,6 +474,9 @@ func (a App) ServiceNames() []string {
 	if a.Entry.Services.AIStor != nil {
 		names = append(names, string(AIStor))
 	}
+	if a.Entry.Services.MongoDB != nil {
+		names = append(names, string(MongoDB))
+	}
 	if a.Entry.Services.Signoz != nil {
 		names = append(names, string(Signoz))
 	}
@@ -466,7 +484,7 @@ func (a App) ServiceNames() []string {
 }
 
 func (a App) BackupableServiceNames() []string {
-	names := make([]string, 0, 4)
+	names := make([]string, 0, 5)
 	for _, n := range a.ServiceNames() {
 		if !nonBackupable[ServiceName(n)] {
 			names = append(names, n)
@@ -484,7 +502,7 @@ func (a App) CreatedAtTime() time.Time {
 }
 
 func (a App) EnvBlocks() []EnvBlock {
-	blocks := make([]EnvBlock, 0, 4)
+	blocks := make([]EnvBlock, 0, 5)
 	if cfg := a.Entry.Services.Postgres; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "PostgreSQL", Body: postgresEnv(*cfg)})
 	}
@@ -496,6 +514,9 @@ func (a App) EnvBlocks() []EnvBlock {
 	}
 	if cfg := a.Entry.Services.AIStor; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "AIStor", Body: aistorEnv(*cfg)})
+	}
+	if cfg := a.Entry.Services.MongoDB; cfg != nil {
+		blocks = append(blocks, EnvBlock{Service: "MongoDB", Body: mongodbEnv(*cfg)})
 	}
 	if cfg := a.Entry.Services.Signoz; cfg != nil {
 		blocks = append(blocks, EnvBlock{Service: "SignOz", Body: signozEnv(*cfg)})
@@ -578,5 +599,18 @@ func aistorEnv(cfg AIStorConfig) string {
 		fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", cfg.AccessKey),
 		fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", cfg.SecretKey),
 		"AWS_REGION=us-east-1",
+	}, "\n")
+}
+
+func mongodbEnv(cfg MongoDBConfig) string {
+	return strings.Join([]string{
+		"# === MongoDB ===",
+		fmt.Sprintf("MONGODB_URL=mongodb://%s:%s@mongodb:27017/%s?authSource=%s",
+			cfg.Username, cfg.Password, cfg.Database, cfg.Database),
+		"MONGODB_HOST=mongodb",
+		"MONGODB_PORT=27017",
+		fmt.Sprintf("MONGODB_USERNAME=%s", cfg.Username),
+		fmt.Sprintf("MONGODB_PASSWORD=%s", cfg.Password),
+		fmt.Sprintf("MONGODB_DATABASE=%s", cfg.Database),
 	}, "\n")
 }

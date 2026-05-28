@@ -10,7 +10,7 @@ import (
 // orderedServices is the teardown order: addons first (they're cheapest),
 // then provisioning services. The order matches the original TS remove.ts
 // switch on each services.X check.
-var orderedServices = []string{"postgres", "redis", "rabbitmq", "aistor", "signoz"}
+var orderedServices = []string{"postgres", "redis", "rabbitmq", "aistor", "mongodb", "signoz"}
 
 // RemoveApp tears down every service attached to appName and deletes the
 // registry entry. Individual service teardown errors are reported but don't

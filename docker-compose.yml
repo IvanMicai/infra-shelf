@@ -95,6 +95,36 @@ services:
     networks:
       - infra
 
+  # ─── MongoDB ───────────────────────────────────────────────
+  mongodb:
+    # Sem imagem alpine oficial — a imagem oficial e Debian-based e ja inclui
+    # mongosh + mongodump/mongorestore (MongoDB Database Tools).
+    #
+    # Pin exato em 7.0.34 (nao 8.x): os patches recentes do 8.x adicionaram um
+    # guard FATAL que recusa Linux kernel >= 6.19 (SERVER-121912, bug de
+    # io_uring). O OrbStack/Docker local roda kernel 7.0.x, entao mongo:8.0/8.3
+    # nao sobem. 7.0.34 (ultimo LTS-7) e anterior ao guard, roda em qualquer
+    # kernel, e fica congelado pra evitar surpresa se um patch futuro do 7.0 o
+    # backportar.
+    image: mongo:7.0.34
+    container_name: infra-mongodb
+    restart: unless-stopped
+    labels:
+      infra-shelf.observe: "true"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - ${DATA_DIR:-./data}/mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - infra
+
   # ─── Web app ───────────────────────────────────────────────
   app:
     build:
@@ -132,6 +162,7 @@ services:
       - redis
       - rabbitmq
       - aistor
+      - mongodb
     networks:
       - infra
 
@@ -151,6 +182,8 @@ services:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
     restart: "no"
     entrypoint: ["/usr/local/bin/shelf"]
