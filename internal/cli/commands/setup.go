@@ -19,7 +19,7 @@ func NewSetupCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  runSetup,
 	}
-	cmd.Flags().StringP("services", "s", "", "comma-separated services (postgres,redis,rabbitmq,aistor,signoz)")
+	cmd.Flags().StringP("services", "s", "", "comma-separated services (postgres,redis,rabbitmq,aistor,mongodb,signoz)")
 	cmd.Flags().String("env", "", "tag a single app with this environment")
 	cmd.Flags().String("envs", "", "expand into sibling apps (CSV of envs)")
 	cmd.Flags().Bool("full-access", false, "grant full data-plane access (no key/db isolation)")
@@ -32,7 +32,7 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := requireAtLeastOneService(services, "postgres,redis,rabbitmq,aistor"); err != nil {
+	if err := requireAtLeastOneService(services, "postgres,redis,rabbitmq,aistor,mongodb"); err != nil {
 		return err
 	}
 
