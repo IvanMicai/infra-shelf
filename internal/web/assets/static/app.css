@@ -462,6 +462,19 @@ textarea:focus {
   flex-wrap: wrap;
 }
 
+.credentials-reveal > summary {
+  list-style: none;
+  margin: 16px 18px;
+}
+
+.credentials-reveal > summary::-webkit-details-marker {
+  display: none;
+}
+
+.credentials-reveal[open] > summary {
+  margin-bottom: 8px;
+}
+
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   background: #edf0ec;
