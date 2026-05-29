@@ -20,6 +20,7 @@ var containers = []Status{
 	{Service: "Redis", Container: "infra-redis"},
 	{Service: "RabbitMQ", Container: "infra-rabbitmq"},
 	{Service: "AIStor", Container: "infra-aistor"},
+	{Service: "MongoDB", Container: "infra-mongodb"},
 	{Service: "SignOz", Container: "infra-signoz-otel-collector"},
 }
 
