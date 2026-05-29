@@ -1,4 +1,4 @@
-<div class="status-grid" id="status-grid" hx-get="/fragments/status" hx-trigger="every 10s" hx-swap="outerHTML">
+<div class="status-grid" id="status-grid">
   {{range .Statuses}}
   <div class="status-item {{if .Running}}ok{{else}}bad{{end}}">
     <span>{{.Service}}</span>

@@ -110,7 +110,6 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /apps", s.appsPage)
 	mux.HandleFunc("POST /apps", s.createApp)
 	mux.HandleFunc("GET /apps/{name}", s.appDetail)
-	mux.HandleFunc("GET /apps/{name}/credentials", s.appCredentials)
 	mux.HandleFunc("GET /apps/{name}/env", s.downloadEnv)
 	mux.HandleFunc("POST /apps/{name}/backup", s.backupApp)
 	mux.HandleFunc("POST /apps/{name}/services", s.addServices)
@@ -274,41 +273,8 @@ func (s *Server) appDetail(w http.ResponseWriter, r *http.Request) {
 	data := s.page(r, appName, "apps")
 	data.App = app
 	data.Backups = backups
-	s.render(w, "app_detail.html", data)
-}
-
-func (s *Server) appCredentials(w http.ResponseWriter, r *http.Request) {
-	appName := r.PathValue("name")
-	app, ok, err := s.registry.GetApp(appName)
-	if err != nil {
-		s.renderError(w, err)
-		return
-	}
-	if !ok {
-		http.NotFound(w, r)
-		return
-	}
-
-	if service := r.URL.Query().Get("service"); service != "" {
-		for _, info := range app.ServiceInfos() {
-			if info.Name == service {
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				fmt.Fprintf(w,
-					`<pre id="cred-%s" class="env-box">%s</pre>`,
-					template.HTMLEscapeString(info.Name),
-					template.HTMLEscapeString(info.EnvBody),
-				)
-				return
-			}
-		}
-		http.NotFound(w, r)
-		return
-	}
-
-	data := s.page(r, appName, "apps")
-	data.App = app
 	data.EnvFile = app.EnvFile()
-	s.render(w, "credentials.html", data)
+	s.render(w, "app_detail.html", data)
 }
 
 func (s *Server) backupApp(w http.ResponseWriter, r *http.Request) {

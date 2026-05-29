@@ -14,12 +14,15 @@
 <section class="panel">
   <div class="panel-header">
     <h2>Credentials</h2>
-    <button class="button small" type="button" hx-get="/apps/{{.App.Name}}/credentials" hx-target="#credentials-panel-content" hx-swap="outerHTML">Reveal credentials</button>
   </div>
-  <div id="credentials-panel-content" class="secret-placeholder">
-    <span class="pill muted">hidden</span>
-    <strong>Credentials are hidden until revealed.</strong>
-  </div>
+  <details class="credentials-reveal">
+    <summary class="button small">Reveal credentials</summary>
+    <div class="credential-actions">
+      <span class="pill ok">revealed</span>
+      <a class="button small" href="/apps/{{.App.Name}}/env">Download .env</a>
+    </div>
+    <textarea class="env-box" readonly>{{.EnvFile}}</textarea>
+  </details>
 </section>
 
 {{if .App.MissingServices}}
