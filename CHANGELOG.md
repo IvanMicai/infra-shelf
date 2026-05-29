@@ -24,7 +24,7 @@ Initial open-source release under the MIT license.
   MinIO with an `S3_IMAGE` override for commercial AIStor builds.
 - Scheduled backups with retention (days / count) and optional upload to any
   S3-compatible storage.
-- Web UI (Go templates + HTMX, pure-Go SQLite) for apps, credentials, backups,
+- Web UI (Go templates, pure-Go SQLite) for apps, credentials, backups,
   and schedules.
 - `reconcile` to rebuild per-app resources from the registry after a volume loss
   (runs idempotently on every `docker compose up`).

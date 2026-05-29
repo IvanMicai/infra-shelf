@@ -212,7 +212,7 @@ You can reprint this block any time with `./shelf credentials myapp`.
 
 ## Web Interface
 
-The web UI (`./shelf-web`) is built with Go templates + HTMX and shares the same
+The web UI (`./shelf-web`) is built with Go templates and shares the same
 `internal/shelfcore` package as the CLI — no subprocess, no stdout parsing. A
 pure-Go SQLite database (`modernc.org/sqlite`) stores schedules and run history.
 On each app's page, credentials stay hidden until you click **Reveal
@@ -412,7 +412,6 @@ infra-shelf stands on the shoulders of these open-source projects:
 | [MinIO](https://min.io/) | S3-compatible object storage |
 | [SignOz](https://signoz.io/) | Observability (logs, traces, metrics) |
 | [Cobra](https://github.com/spf13/cobra) | CLI framework |
-| [HTMX](https://htmx.org/) | Web UI interactivity |
 | [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) | Pure-Go SQLite driver |
 | [Go](https://go.dev/) | Language & runtime |
 

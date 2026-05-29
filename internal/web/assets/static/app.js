@@ -1,4 +1,4 @@
-// Auto-refresh do grid de status, substituindo o polling que era feito pelo HTMX.
+// Auto-refresh do grid de status: busca o fragmento server-rendered e troca o nó.
 // Reaproveita o basic auth do browser (mesma origem) e o Cache-Control: no-store
 // já definido pelo servidor. Sem dependências externas.
 (function () {
