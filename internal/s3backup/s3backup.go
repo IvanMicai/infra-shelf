@@ -7,12 +7,12 @@ import (
 	"path"
 	"strings"
 
+	"github.com/IvanMicai/infra-shelf/internal/backup"
+	"github.com/IvanMicai/infra-shelf/internal/config"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/ivan/infra-shelf/internal/backup"
-	"github.com/ivan/infra-shelf/internal/config"
 )
 
 type Client struct {

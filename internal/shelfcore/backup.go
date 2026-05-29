@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ivan/infra-shelf/internal/docker"
-	"github.com/ivan/infra-shelf/internal/registry"
-	"github.com/ivan/infra-shelf/internal/services/aistor"
-	"github.com/ivan/infra-shelf/internal/services/mongodb"
-	"github.com/ivan/infra-shelf/internal/services/postgres"
-	"github.com/ivan/infra-shelf/internal/services/rabbitmq"
-	"github.com/ivan/infra-shelf/internal/services/redis"
+	"github.com/IvanMicai/infra-shelf/internal/docker"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/services/aistor"
+	"github.com/IvanMicai/infra-shelf/internal/services/mongodb"
+	"github.com/IvanMicai/infra-shelf/internal/services/postgres"
+	"github.com/IvanMicai/infra-shelf/internal/services/rabbitmq"
+	"github.com/IvanMicai/infra-shelf/internal/services/redis"
 )
 
 var serviceExt = map[string]string{

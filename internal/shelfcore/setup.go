@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ivan/infra-shelf/internal/envspec"
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/envspec"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 type SetupOptions struct {
@@ -20,10 +20,10 @@ type SetupOptions struct {
 // the result of SetupApp/AddServices). Errors per-service are non-fatal — they
 // don't abort the rest of the targets, mirroring the legacy TS behavior.
 type TargetResult struct {
-	Name              string
-	Entry             registry.AppEntry
-	Provisioned       []string                  // services successfully provisioned
-	Failures          map[string]error          // service → error
+	Name        string
+	Entry       registry.AppEntry
+	Provisioned []string         // services successfully provisioned
+	Failures    map[string]error // service → error
 }
 
 // SetupApp creates one or more apps (depending on --envs) and provisions

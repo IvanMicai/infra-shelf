@@ -22,8 +22,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ivan/infra-shelf/internal/passwordgen"
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/passwordgen"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 const Container = "infra-mongodb"

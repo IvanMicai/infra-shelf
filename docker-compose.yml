@@ -43,8 +43,8 @@ services:
 
   # ─── RabbitMQ ──────────────────────────────────────────────
   rabbitmq:
-    # Management plugin habilitado pra que o receiver `rabbitmq` do OTel
-    # collector consiga consultar a Management HTTP API em :15672.
+    # Management plugin enabled so the OTel collector's `rabbitmq` receiver can
+    # query the Management HTTP API on :15672.
     image: rabbitmq:3-management-alpine
     container_name: infra-rabbitmq
     restart: unless-stopped
@@ -64,48 +64,16 @@ services:
     networks:
       - infra
 
-  # ─── AIStor Free (S3-compatible, ex-MinIO) ────────────────
-  aistor:
-    image: quay.io/minio/aistor/minio:latest
-    container_name: infra-aistor
-    restart: unless-stopped
-    labels:
-      infra-shelf.observe: "true"
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${AISTOR_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${AISTOR_ROOT_PASSWORD}
-      MINIO_LICENSE: ${AISTOR_LICENSE:-}
-      MINIO_SUBNET_API_KEY: ${AISTOR_SUBNET_API_KEY:-}
-      # Expoe /minio/v2/metrics/{cluster,node,bucket} sem token pro
-      # prometheus receiver do collector. Outras rotas seguem autenticadas.
-      MINIO_PROMETHEUS_AUTH_TYPE: public
-    volumes:
-      - ${DATA_DIR:-./data}/aistor:/data
-    ports:
-      - "${AISTOR_API_PORT:-9000}:9000"
-    healthcheck:
-      test:
-        - "CMD-SHELL"
-        - "MC_HOST_local=http://$$MINIO_ROOT_USER:$$MINIO_ROOT_PASSWORD@localhost:9000 mc admin info local --json >/dev/null"
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-    networks:
-      - infra
-
   # ─── MongoDB ───────────────────────────────────────────────
   mongodb:
-    # Sem imagem alpine oficial — a imagem oficial e Debian-based e ja inclui
-    # mongosh + mongodump/mongorestore (MongoDB Database Tools).
+    # No official alpine image — the official image is Debian-based and already
+    # ships mongosh + mongodump/mongorestore (MongoDB Database Tools).
     #
-    # Pin exato em 7.0.34 (nao 8.x): os patches recentes do 8.x adicionaram um
-    # guard FATAL que recusa Linux kernel >= 6.19 (SERVER-121912, bug de
-    # io_uring). O OrbStack/Docker local roda kernel 7.0.x, entao mongo:8.0/8.3
-    # nao sobem. 7.0.34 (ultimo LTS-7) e anterior ao guard, roda em qualquer
-    # kernel, e fica congelado pra evitar surpresa se um patch futuro do 7.0 o
-    # backportar.
+    # Pinned exactly to 7.0.34 (not 8.x): recent 8.x patches added a FATAL guard
+    # that refuses Linux kernel >= 6.19 (SERVER-121912, an io_uring bug). The
+    # local OrbStack/Docker VM runs a 7.x kernel, so mongo:8.0/8.3 won't boot.
+    # 7.0.34 (the last LTS-7 patch) predates the guard, runs on any kernel, and
+    # is frozen here to avoid surprises if a future 7.0 patch backports it.
     image: mongo:7.0.34
     container_name: infra-mongodb
     restart: unless-stopped
@@ -161,17 +129,16 @@ services:
       - postgres
       - redis
       - rabbitmq
-      - aistor
       - mongodb
     networks:
       - infra
 
   # ─── Reconcile (one-shot) ──────────────────────────────────
-  # Reaplica vhosts/users/perms registrados em data/apps.json contra os
-  # containers. Resgata o estado quando um volume é perdido (server reset,
-  # delete acidental). Roda em todo `docker compose up` depois que postgres
-  # e rabbitmq estão healthy, executa o binário shelf da mesma imagem do app
-  # e sai. Idempotente — sem-op se tudo já estiver consistente.
+  # Reapplies the vhosts/users/perms recorded in data/apps.json against the
+  # containers. Recovers state when a volume is lost (server reset, accidental
+  # delete). Runs on every `docker compose up` once postgres and rabbitmq are
+  # healthy, executes the shelf binary from the same image as the app, then
+  # exits. Idempotent — a no-op when everything is already consistent.
   reconcile:
     build:
       context: .

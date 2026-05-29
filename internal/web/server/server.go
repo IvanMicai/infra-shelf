@@ -15,17 +15,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ivan/infra-shelf/internal/backup"
-	"github.com/ivan/infra-shelf/internal/config"
-	"github.com/ivan/infra-shelf/internal/docker"
-	"github.com/ivan/infra-shelf/internal/envspec"
-	"github.com/ivan/infra-shelf/internal/registry"
-	"github.com/ivan/infra-shelf/internal/shelfcore"
-	"github.com/ivan/infra-shelf/internal/web/assets"
-	"github.com/ivan/infra-shelf/internal/web/auth"
-	"github.com/ivan/infra-shelf/internal/web/backupservice"
-	"github.com/ivan/infra-shelf/internal/web/runlog"
-	"github.com/ivan/infra-shelf/internal/web/scheduler"
+	"github.com/IvanMicai/infra-shelf/internal/backup"
+	"github.com/IvanMicai/infra-shelf/internal/config"
+	"github.com/IvanMicai/infra-shelf/internal/docker"
+	"github.com/IvanMicai/infra-shelf/internal/envspec"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/shelfcore"
+	"github.com/IvanMicai/infra-shelf/internal/web/assets"
+	"github.com/IvanMicai/infra-shelf/internal/web/auth"
+	"github.com/IvanMicai/infra-shelf/internal/web/backupservice"
+	"github.com/IvanMicai/infra-shelf/internal/web/runlog"
+	"github.com/IvanMicai/infra-shelf/internal/web/scheduler"
 )
 
 type Server struct {

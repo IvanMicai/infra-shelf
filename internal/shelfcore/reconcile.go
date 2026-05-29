@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/ivan/infra-shelf/internal/services/mongodb"
-	"github.com/ivan/infra-shelf/internal/services/rabbitmq"
+	"github.com/IvanMicai/infra-shelf/internal/services/mongodb"
+	"github.com/IvanMicai/infra-shelf/internal/services/rabbitmq"
 )
 
 // ReconcileResult summarizes what Reconcile did for one app.

@@ -8,7 +8,7 @@ package shelfcore
 import (
 	"errors"
 
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 // Reporter receives streamed progress messages while long-running operations
@@ -53,12 +53,12 @@ func New(store *registry.Store, backupsDir string, reporter Reporter) *Engine {
 // Sentinel errors — callers (especially the web HTTP layer) can map these to
 // status codes (404 / 409 / 400) instead of regex-matching stdout.
 var (
-	ErrAppNotFound        = errors.New("app not found")
-	ErrAppAlreadyExists   = errors.New("app already exists")
-	ErrNoServices         = errors.New("at least one service is required")
-	ErrServiceNotAttached = errors.New("service is not attached to this app")
-	ErrNotDetachable      = errors.New("service is not detachable")
+	ErrAppNotFound         = errors.New("app not found")
+	ErrAppAlreadyExists    = errors.New("app already exists")
+	ErrNoServices          = errors.New("at least one service is required")
+	ErrServiceNotAttached  = errors.New("service is not attached to this app")
+	ErrNotDetachable       = errors.New("service is not detachable")
 	ErrContainerNotRunning = errors.New("container is not running")
-	ErrNonBackupable      = errors.New("service has no backup support")
-	ErrBackupNotFound     = errors.New("no backup found")
+	ErrNonBackupable       = errors.New("service has no backup support")
+	ErrBackupNotFound      = errors.New("no backup found")
 )

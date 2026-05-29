@@ -1,0 +1,21 @@
+# Example: connect your own project to infra-shelf.
+#
+# 1. Start infra-shelf:            make up        (in the infra-shelf repo)
+# 2. Provision credentials:        ./shelf setup myapp -s postgres,redis,rabbitmq,mongodb
+# 3. Paste the printed env block into this project's .env
+# 4. Start your app:               docker compose up
+#
+# Your app joins the shared `infra-shelf` network and reaches services by
+# hostname: postgres, redis, rabbitmq, mongodb (and aistor when `make s3-up`).
+
+services:
+  app:
+    image: your-app:latest
+    env_file:
+      - .env # the block printed by `shelf setup` / `shelf credentials`
+    networks:
+      - infra-shelf
+
+networks:
+  infra-shelf:
+    external: true

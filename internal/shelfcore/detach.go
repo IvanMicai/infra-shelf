@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 // DetachServices removes addon services (currently only signoz) from an app's

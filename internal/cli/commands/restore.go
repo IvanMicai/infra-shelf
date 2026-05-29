@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ivan/infra-shelf/internal/output"
-	"github.com/ivan/infra-shelf/internal/shelfcore"
+	"github.com/IvanMicai/infra-shelf/internal/output"
+	"github.com/IvanMicai/infra-shelf/internal/shelfcore"
 )
 
 func NewRestoreCmd() *cobra.Command {

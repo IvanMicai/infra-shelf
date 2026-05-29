@@ -1,47 +1,63 @@
-# SignOz (observabilidade)
+# SignOz (observability)
 
-Stack self-host de SignOz integrada ao infra-shelf. Opt-in: não sobe com `make up`.
+A self-hosted SignOz stack integrated with infra-shelf. Opt-in: it does **not**
+start with `make up`.
 
-## Subir
-
-```bash
-make signoz-up      # liga o stack (clickhouse, zookeeper, query-service, frontend, alertmanager, otel-collector)
-make signoz-logs    # acompanha collector + query-service
-make signoz-down    # para sem apagar dados
-```
-
-UI: <http://localhost:3301> (local) ou <http://192.168.15.4:3301> (TrueNAS).
-Primeira tela pede pra criar admin (e-mail + senha) — fica salvo no SQLite do query-service.
-
-> Primeiro boot demora ~1min: o ClickHouse cria schemas. Os healthchecks só ficam verdes depois disso.
-
-## Conectar um app
+## Start
 
 ```bash
-bun shelf setup meu-app -s postgres,signoz
+make signoz-up      # bring up the stack (clickhouse, zookeeper, query-service, frontend, alertmanager, otel-collector)
+make signoz-logs    # follow the collector + query-service
+make signoz-down    # stop without deleting data
 ```
 
-O bloco `# === SignOz (OpenTelemetry) ===` no output traz `OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317` e `OTEL_SERVICE_NAME=meu-app`. Cole no `.env` do app — qualquer SDK OTel padrão (Python, Node, Go, etc) detecta automaticamente.
+UI: <http://localhost:3301> (or `http://<host>:3301` when running on a remote
+server). The first screen asks you to create an admin (email + password), stored
+in the query-service SQLite.
 
-App existente? `bun shelf add meu-app -s signoz`.
+> First boot takes ~1 min: ClickHouse creates its schemas. Healthchecks only go
+> green after that.
 
-## O que é coletado automaticamente
+## Connect an app
 
-- **Logs stdout** de todo container marcado com label `infra-shelf.observe=true` (postgres, redis, rabbitmq, aistor, app web)
-- **Métricas de container** (CPU/RAM/rede/IO) via `docker_stats` receiver
-- **Métricas de host** via `hostmetrics` receiver (reais no TrueNAS; container-view no macOS)
-- **Traces, métricas e logs OTLP** que os apps mandarem
+```bash
+./shelf setup myapp -s postgres,signoz
+```
+
+The `# === SignOz (OpenTelemetry) ===` block in the output carries
+`OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317` and
+`OTEL_SERVICE_NAME=myapp`. Paste it into the app's `.env` — any standard OTel SDK
+(Python, Node, Go, etc.) auto-detects it.
+
+Already have an app? `./shelf add myapp -s signoz`.
+
+## What is collected automatically
+
+- **stdout logs** of every container labeled `infra-shelf.observe=true`
+  (postgres, redis, rabbitmq, aistor, the web app)
+- **Container metrics** (CPU/RAM/network/IO) via the `docker_stats` receiver
+- **Host metrics** via the `hostmetrics` receiver (real on a Linux host;
+  container-scoped on macOS)
+- **Traces, metrics and logs (OTLP)** that apps send
 
 ## Backup
 
-Não há backup per-app. Telemetria fica no ClickHouse compartilhado e expira pela retention policy configurada na UI do SignOz (Settings → Retention). `bun shelf backup meu-app` simplesmente pula signoz.
+There is no per-app backup. Telemetry lives in the shared ClickHouse and expires
+via the retention policy configured in the SignOz UI (Settings → Retention).
+`./shelf backup myapp` simply skips signoz.
 
-## Versões
+## Versions
 
-Tags pinadas no `docker-compose.signoz.yml`. Pra atualizar: bumpe as tags + leia release notes em <https://github.com/SigNoz/signoz/releases>. Stack atual reflete SignOz v0.55 community.
+Image tags are pinned in `docker-compose.signoz.yml`. To upgrade: bump the tags
+and read the release notes at <https://github.com/SigNoz/signoz/releases>. The
+current stack tracks the SignOz v0.124 community build.
 
 ## Troubleshooting
 
-- **UI vazia / "no data"**: confira `make signoz-logs` — o collector deve mostrar `Everything is ready. Begin running and processing data.`
-- **App não aparece em Services**: confira que o endpoint do app é `http://signoz-otel-collector:4317` (na rede `infra-shelf`) ou `http://localhost:4317` (de fora). `OTEL_SERVICE_NAME` precisa estar setado.
-- **Memória apertada**: ClickHouse + Zookeeper consomem ~2GB sozinhos. Em dev local considere `make signoz-down` quando não estiver usando.
+- **Empty UI / "no data"**: check `make signoz-logs` — the collector should print
+  `Everything is ready. Begin running and processing data.`
+- **App missing from Services**: confirm the app's endpoint is
+  `http://signoz-otel-collector:4317` (on the `infra-shelf` network) or
+  `http://localhost:4317` (from outside). `OTEL_SERVICE_NAME` must be set.
+- **Tight on memory**: ClickHouse + Zookeeper use ~2 GB on their own. For local
+  dev, `make signoz-down` when you are not using it.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 // orderedServices is the teardown order: addons first (they're cheapest),

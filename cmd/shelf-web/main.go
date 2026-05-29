@@ -10,13 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ivan/infra-shelf/internal/config"
-	"github.com/ivan/infra-shelf/internal/registry"
-	"github.com/ivan/infra-shelf/internal/s3backup"
-	"github.com/ivan/infra-shelf/internal/shelfcore"
-	"github.com/ivan/infra-shelf/internal/web/backupservice"
-	"github.com/ivan/infra-shelf/internal/web/scheduler"
-	"github.com/ivan/infra-shelf/internal/web/server"
+	"github.com/IvanMicai/infra-shelf/internal/config"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/s3backup"
+	"github.com/IvanMicai/infra-shelf/internal/shelfcore"
+	"github.com/IvanMicai/infra-shelf/internal/web/backupservice"
+	"github.com/IvanMicai/infra-shelf/internal/web/scheduler"
+	"github.com/IvanMicai/infra-shelf/internal/web/server"
 )
 
 func main() {

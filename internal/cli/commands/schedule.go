@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ivan/infra-shelf/internal/config"
-	"github.com/ivan/infra-shelf/internal/output"
-	"github.com/ivan/infra-shelf/internal/web/scheduler"
+	"github.com/IvanMicai/infra-shelf/internal/config"
+	"github.com/IvanMicai/infra-shelf/internal/output"
+	"github.com/IvanMicai/infra-shelf/internal/web/scheduler"
 )
 
 func NewScheduleCmd() *cobra.Command {

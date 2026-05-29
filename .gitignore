@@ -24,3 +24,6 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# Local agent / tool state
+.claude/

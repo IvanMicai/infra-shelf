@@ -3,7 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/ivan/infra-shelf/internal/cli/commands"
+	"github.com/IvanMicai/infra-shelf/internal/cli/commands"
 )
 
 func NewRootCmd() *cobra.Command {
