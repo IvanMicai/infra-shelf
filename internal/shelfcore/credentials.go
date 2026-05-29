@@ -3,7 +3,7 @@ package shelfcore
 import (
 	"fmt"
 
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 // Credentials returns the rendered .env block for an app. The web UI reveals

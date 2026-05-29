@@ -9,9 +9,9 @@ name: infra-shelf
 
 services:
   signoz-zookeeper:
-    # Bitnami movou tags antigas para bitnamilegacy; usamos os env vars
-    # bitnami-style (ZOO_SERVER_ID, ALLOW_ANONYMOUS_LOGIN) — ficar com a
-    # imagem deles é mais simples que migrar pra `zookeeper:3.9` oficial.
+    # Bitnami moved older tags to bitnamilegacy; we use their bitnami-style env
+    # vars (ZOO_SERVER_ID, ALLOW_ANONYMOUS_LOGIN) — staying on their image is
+    # simpler than migrating to the official `zookeeper:3.9`.
     image: bitnamilegacy/zookeeper:3.9.3-debian-12-r22
     container_name: infra-signoz-zookeeper
     restart: unless-stopped
@@ -91,13 +91,12 @@ services:
       - infra
 
   # Unified SignOz server (UI + API + opamp + alertmanager) — v0.122+
-  # consolida query-service
-  # e frontend numa imagem só. Anteriormente eram dois containers; as imagens
-  # signoz/query-service:latest e signoz/frontend:latest eram variantes
-  # enterprise (MSK) com nginx capado.
+  # consolidates query-service and frontend into a single image. Previously
+  # these were two containers; signoz/query-service:latest and
+  # signoz/frontend:latest were enterprise (MSK) variants with a stripped nginx.
   signoz:
-    # `signoz/signoz` é a build Enterprise (pede licença ativa). A OSS
-    # community fica em signoz/signoz-community — mesmo binário sem o EE.
+    # `signoz/signoz` is the Enterprise build (requires an active license). The
+    # OSS community build lives at signoz/signoz-community — same binary, no EE.
     image: signoz/signoz-community:v0.124.0
     container_name: infra-signoz
     restart: unless-stopped
@@ -142,9 +141,10 @@ services:
         condition: service_healthy
       signoz:
         condition: service_healthy
-    # Grant access to /var/run/docker.sock (owned by group 999 on the TrueNAS
-    # host). Without this the `resourcedetection` processor's `docker`
-    # detector fails with "permission denied" and crashes the pipeline.
+    # Grant access to /var/run/docker.sock. Without this the `resourcedetection`
+    # processor's `docker` detector fails with "permission denied" and crashes
+    # the pipeline. 999 is the docker socket's group id on many Linux hosts —
+    # adjust to match `stat -c %g /var/run/docker.sock` on your host if needed.
     group_add:
       - "999"
     environment:
@@ -152,7 +152,7 @@ services:
       LOW_CARDINAL_EXCEPTION_GROUPING: "false"
       DEPLOYMENT_ENV: ${SIGNOZ_DEFAULT_ENV:-dev}
       CLICKHOUSE_DSN: tcp://${SIGNOZ_CLICKHOUSE_USER:-signoz}:${SIGNOZ_CLICKHOUSE_PASSWORD:-signoz}@signoz-clickhouse:9000
-      # Credenciais dos datastores — receivers leem via ${env:VAR}.
+      # Datastore credentials — receivers read them via ${env:VAR}.
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_PASSWORD: ${REDIS_PASSWORD}

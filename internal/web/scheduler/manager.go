@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ivan/infra-shelf/internal/backup"
-	"github.com/ivan/infra-shelf/internal/web/backupservice"
+	"github.com/IvanMicai/infra-shelf/internal/backup"
+	"github.com/IvanMicai/infra-shelf/internal/web/backupservice"
 	"github.com/robfig/cron/v3"
 )
 

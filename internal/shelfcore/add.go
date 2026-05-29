@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ivan/infra-shelf/internal/envspec"
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/envspec"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 type AddOptions struct {

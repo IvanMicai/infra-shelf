@@ -1,8 +1,8 @@
 package shelfcore
 
 import (
-	"github.com/ivan/infra-shelf/internal/registry"
-	"github.com/ivan/infra-shelf/internal/services/signoz"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/services/signoz"
 )
 
 // signozAdapter wraps signoz.Provision so services.go can call it without

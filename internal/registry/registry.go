@@ -145,20 +145,20 @@ var serviceLabels = map[ServiceName]string{
 }
 
 var serviceBackupHow = map[ServiceName]string{
-	Postgres: "pg_dump --clean --if-exists do database dedicado — captura schema + dados; restore drop-and-reimport via psql.",
-	Redis:    "Snapshot logico via Lua: itera KEYS '<app>:*' e serializa strings/hashes/lists/sets/zsets em JSON; restore reescreve as chaves.",
-	RabbitMQ: "rabbitmqctl export_definitions filtrado pelo vhost — somente definicoes (queues/exchanges/bindings/policies/users). Mensagens em flight NAO sao salvas.",
-	AIStor:   "mc mirror local/<bucket> para diretorio temporario + tar streaming — preserva todos os objetos. Restore extrai o tar e roda mc mirror --overwrite --remove para refletir o estado do snapshot.",
-	MongoDB:  "mongodump --archive --gzip do database dedicado — captura collections, documentos e indices. Restore drop-and-reimport via mongorestore --drop.",
-	Signoz:   "Sem backup per-app — telemetria fica no ClickHouse compartilhado e expira pela retention policy do SignOz.",
+	Postgres: "pg_dump --clean --if-exists of the dedicated database — captures schema + data; restore is a drop-and-reimport via psql.",
+	Redis:    "Logical snapshot via Lua: iterates KEYS '<app>:*' and serializes strings/hashes/lists/sets/zsets to JSON; restore rewrites the keys.",
+	RabbitMQ: "rabbitmqctl export_definitions filtered by vhost — definitions only (queues/exchanges/bindings/policies/users). In-flight messages are NOT saved.",
+	AIStor:   "mc mirror local/<bucket> to a temp directory + tar streaming — preserves every object. Restore extracts the tar and runs mc mirror --overwrite --remove to match the snapshot state.",
+	MongoDB:  "mongodump --archive --gzip of the dedicated database — captures collections, documents and indexes. Restore is a drop-and-reimport via mongorestore --drop.",
+	Signoz:   "No per-app backup — telemetry lives in the shared ClickHouse and expires via the SignOz retention policy.",
 }
 
 var serviceRestoreNote = map[ServiceName]string{
-	Postgres: "psql -d <app> reimporta o dump; ownership e privilegios sao reaplicados ao role do app.",
-	Redis:    "Le o JSON e aplica SET/HSET/RPUSH/SADD/ZADD por chave; nao apaga chaves nao presentes no snapshot.",
-	RabbitMQ: "rabbitmqctl import_definitions re-cria objetos do vhost (idempotente).",
-	AIStor:   "Sobrescreve o bucket inteiro com o conteudo do tar (--remove apaga objetos que sumiram entre os pontos no tempo).",
-	MongoDB:  "mongorestore --archive --gzip --drop reimporta o database; cada collection do snapshot e dropada e recriada (idempotente). O user do app e reaplicado pelo reconcile, nao pelo restore.",
+	Postgres: "psql -d <app> reimports the dump; ownership and privileges are reapplied to the app's role.",
+	Redis:    "Reads the JSON and applies SET/HSET/RPUSH/SADD/ZADD per key; does not delete keys absent from the snapshot.",
+	RabbitMQ: "rabbitmqctl import_definitions recreates the vhost's objects (idempotent).",
+	AIStor:   "Overwrites the entire bucket with the tar contents (--remove deletes objects that disappeared between the snapshots).",
+	MongoDB:  "mongorestore --archive --gzip --drop reimports the database; each snapshot collection is dropped and recreated (idempotent). The app's user is reapplied by reconcile, not by restore.",
 	Signoz:   "—",
 }
 

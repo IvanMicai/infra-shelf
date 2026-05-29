@@ -1,4 +1,4 @@
-module github.com/ivan/infra-shelf
+module github.com/IvanMicai/infra-shelf
 
 go 1.25.0
 

@@ -3,8 +3,8 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/ivan/infra-shelf/internal/output"
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/output"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 func NewRegistryCmd() *cobra.Command {

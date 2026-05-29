@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ivan/infra-shelf/internal/cli"
+	"github.com/IvanMicai/infra-shelf/internal/cli"
 )
 
 func main() {

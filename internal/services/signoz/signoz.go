@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ivan/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
 )
 
 type ProvisionOptions struct {

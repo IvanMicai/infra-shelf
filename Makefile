@@ -1,11 +1,18 @@
-.PHONY: help up down restart status logs logs-% reset clean network app dev app-build app-logs signoz-up signoz-down signoz-restart signoz-logs signoz-status up-all build cli web test
+.PHONY: help init up down restart status logs logs-% reset clean network app dev app-build app-logs s3-up s3-down s3-restart s3-logs s3-status signoz-up signoz-down signoz-restart signoz-logs signoz-status up-all build cli web test
 
 ENV_FILE ?= .env
+S3_COMPOSE := -f docker-compose.yml -f docker-compose.s3.yml
 SIGNOZ_COMPOSE := -f docker-compose.yml -f docker-compose.signoz.yml
+ALL_COMPOSE := -f docker-compose.yml -f docker-compose.s3.yml -f docker-compose.signoz.yml
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+init: ## Create .env from the example and prepare local data/backups dirs
+	@test -f $(ENV_FILE) || cp .env.example $(ENV_FILE)
+	@mkdir -p data backups
+	@echo "Ready. Edit $(ENV_FILE), then run 'make build && make up'."
 
 build: cli web ## Build both binaries
 
@@ -62,6 +69,21 @@ app-build: ## Rebuild the web interface image
 app-logs: ## Tail web interface logs
 	docker compose --env-file $(ENV_FILE) logs -f app
 
+s3-up: ## Start the opt-in S3 (MinIO/AIStor) service
+	docker compose --env-file $(ENV_FILE) $(S3_COMPOSE) up -d aistor
+
+s3-down: ## Stop the S3 service
+	docker compose --env-file $(ENV_FILE) $(S3_COMPOSE) stop aistor
+
+s3-restart: ## Restart the S3 service
+	docker compose --env-file $(ENV_FILE) $(S3_COMPOSE) restart aistor
+
+s3-logs: ## Tail S3 service logs
+	docker compose --env-file $(ENV_FILE) $(S3_COMPOSE) logs -f aistor
+
+s3-status: ## Show S3 service status
+	docker compose --env-file $(ENV_FILE) $(S3_COMPOSE) ps
+
 signoz-up: ## Start SignOz observability stack (clickhouse + collector + UI)
 	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) up -d \
 		signoz-zookeeper signoz-clickhouse \
@@ -83,5 +105,5 @@ signoz-logs: ## Tail collector + server logs
 signoz-status: ## Show SignOz container status
 	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) ps
 
-up-all: ## Start core stack + SignOz
-	docker compose --env-file $(ENV_FILE) $(SIGNOZ_COMPOSE) up -d
+up-all: ## Start core stack + S3 + SignOz
+	docker compose --env-file $(ENV_FILE) $(ALL_COMPOSE) up -d

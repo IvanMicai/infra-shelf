@@ -55,7 +55,7 @@ receivers:
 
   # Host metrics. Mount `/:/hostfs:ro` in the collector and set root_path.
   # On macOS the values are from the container's view (Linux VM), not the
-  # Mac itself — acceptable; on TrueNAS this reflects the real host.
+  # Mac itself — acceptable; on a Linux host this reflects the real host.
   hostmetrics:
     collection_interval: 30s
     root_path: /hostfs

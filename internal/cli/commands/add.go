@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ivan/infra-shelf/internal/envspec"
-	"github.com/ivan/infra-shelf/internal/output"
-	"github.com/ivan/infra-shelf/internal/shelfcore"
+	"github.com/IvanMicai/infra-shelf/internal/envspec"
+	"github.com/IvanMicai/infra-shelf/internal/output"
+	"github.com/IvanMicai/infra-shelf/internal/shelfcore"
 )
 
 func NewAddCmd() *cobra.Command {

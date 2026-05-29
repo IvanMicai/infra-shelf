@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ivan/infra-shelf/internal/docker"
-	"github.com/ivan/infra-shelf/internal/registry"
-	"github.com/ivan/infra-shelf/internal/services/aistor"
-	"github.com/ivan/infra-shelf/internal/services/mongodb"
-	"github.com/ivan/infra-shelf/internal/services/postgres"
-	"github.com/ivan/infra-shelf/internal/services/rabbitmq"
-	"github.com/ivan/infra-shelf/internal/services/redis"
+	"github.com/IvanMicai/infra-shelf/internal/docker"
+	"github.com/IvanMicai/infra-shelf/internal/registry"
+	"github.com/IvanMicai/infra-shelf/internal/services/aistor"
+	"github.com/IvanMicai/infra-shelf/internal/services/mongodb"
+	"github.com/IvanMicai/infra-shelf/internal/services/postgres"
+	"github.com/IvanMicai/infra-shelf/internal/services/rabbitmq"
+	"github.com/IvanMicai/infra-shelf/internal/services/redis"
 )
 
 // serviceContainer maps each provisionable service to the container name where
@@ -24,10 +24,11 @@ var serviceContainer = map[string]string{
 	"signoz":   "infra-signoz-otel-collector",
 }
 
-// startHint tells the user how to bring up a missing container. SignOz lives
-// in the optional compose overlay, so it has a different command.
+// startHint tells the user how to bring up a missing container. SignOz and the
+// S3 service live in optional compose overlays, so they have their own commands.
 var startHint = map[string]string{
 	"signoz": "make signoz-up",
+	"aistor": "make s3-up",
 }
 
 // nonBackupable lists services that are intentionally skipped during backup

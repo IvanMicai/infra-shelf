@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ivan/infra-shelf/internal/docker"
-	"github.com/ivan/infra-shelf/internal/output"
+	"github.com/IvanMicai/infra-shelf/internal/docker"
+	"github.com/IvanMicai/infra-shelf/internal/output"
 )
 
 func NewStatusCmd() *cobra.Command {
