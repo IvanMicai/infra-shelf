@@ -1,0 +1,61 @@
+name: Bug report
+description: Something isn't working as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please do **not** paste real credentials, `.env`
+        contents, or `data/apps.json` — redact secrets before posting.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you tried to do, and expected vs. actual behavior.
+      placeholder: I ran `./shelf setup myapp -s postgres` and ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. make up
+        2. ./shelf setup demo -s postgres,redis
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Output from `docker compose logs` / `make logs` (redact secrets).
+      render: shell
+  - type: input
+    id: os
+    attributes:
+      label: Host OS
+      placeholder: macOS 15 (OrbStack) / Ubuntu 24.04
+    validations:
+      required: true
+  - type: input
+    id: docker
+    attributes:
+      label: Docker / Compose version
+      description: Output of `docker version` and `docker compose version`.
+    validations:
+      required: true
+  - type: dropdown
+    id: overlays
+    attributes:
+      label: Which overlays were running?
+      multiple: true
+      options:
+        - core only (make up)
+        - S3 / object storage (make s3-up)
+        - SignOz observability (make signoz-up)
+  - type: input
+    id: version
+    attributes:
+      label: infra-shelf version / commit
+      placeholder: v0.1.0 or git SHA
