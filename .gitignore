@@ -25,5 +25,8 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Local agent / tool state
-.claude/
+# Local agent / tool state — ignore everything under .claude/ EXCEPT the
+# committed install skill (use .claude/* so child paths can be re-included).
+.claude/*
+!.claude/skills/
+!.claude/skills/**

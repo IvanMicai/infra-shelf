@@ -1,4 +1,4 @@
-.PHONY: help init up down restart status logs logs-% reset clean network app dev app-build app-logs s3-up s3-down s3-restart s3-logs s3-status signoz-up signoz-down signoz-restart signoz-logs signoz-status up-all build cli web test
+.PHONY: help init quickstart up down restart status logs logs-% reset clean network app dev app-build app-logs s3-up s3-down s3-restart s3-logs s3-status signoz-up signoz-down signoz-restart signoz-logs signoz-status up-all build cli web test
 
 ENV_FILE ?= .env
 S3_COMPOSE := -f docker-compose.yml -f docker-compose.s3.yml
@@ -13,6 +13,12 @@ init: ## Create .env from the example and prepare local data/backups dirs
 	@test -f $(ENV_FILE) || cp .env.example $(ENV_FILE)
 	@mkdir -p data backups
 	@echo "Ready. Edit $(ENV_FILE), then run 'make build && make up'."
+
+quickstart: init build up ## First run: create .env, build binaries, start the core stack
+	@echo ""
+	@echo "infra-shelf is up. Provision your first app with:"
+	@echo "  ./shelf setup myapp -s postgres,redis,rabbitmq,mongodb"
+	@echo "(remember to change the default passwords in .env first)"
 
 build: cli web ## Build both binaries
 

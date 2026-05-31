@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- One-command installer (`scripts/install.sh`) that clones, builds (host Go or a
+  throwaway Docker build when Go is absent), and starts the core stack; plus a
+  `make quickstart` target.
+- Continuous integration under `.github/`: `vet`/`test`/build of both binaries,
+  gitleaks secret scanning, Conventional-Commits PR-title linting, Dependabot, and
+  issue/PR templates.
+- Contributor and operator documentation in `docs/` (`ARCHITECTURE`,
+  `CONFIGURATION`, `CLI`, `BACKUPS`, `OBSERVABILITY`, `ADDING-A-SERVICE`), and a
+  trimmed, scannable README that links into it.
+- Claude Code install skill (`.claude/skills/infra-shelf-install/`) and an
+  `AGENTS.md` guide so an AI agent can install and wire infra-shelf into a project.
+
 ## [0.1.0] - 2026-05-28
 
 Initial open-source release under the MIT license.

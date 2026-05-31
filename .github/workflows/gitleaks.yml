@@ -1,0 +1,28 @@
+name: gitleaks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Run the pinned gitleaks binary directly (same version as the
+      # .pre-commit-config.yaml hook). Unlike gitleaks-action, this makes no
+      # GitHub API calls, so it needs no extra token permissions (the action
+      # 403'd listing PR commits without pull-requests:read) and keeps the
+      # output transparent.
+      - name: Run gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            ghcr.io/gitleaks/gitleaks:v8.21.2 \
+            dir . --config .gitleaks.toml --redact --no-banner --verbose
