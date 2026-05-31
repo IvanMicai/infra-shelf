@@ -45,7 +45,7 @@ fi
 info()  { printf '%s==>%s %s\n' "$CYAN" "$RESET" "$*"; }
 ok()    { printf '%s ✔%s %s\n' "$GREEN" "$RESET" "$*"; }
 warn()  { printf '%s ⚠%s %s\n' "$YELLOW" "$RESET" "$*" >&2; }
-die()   { printf '%s �’%s %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
+die()   { printf '%s ✗%s %s\n' "$RED" "$RESET" "$*" >&2; exit 1; }
 have()  { command -v "$1" >/dev/null 2>&1; }
 
 usage() { sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
