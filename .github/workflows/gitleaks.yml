@@ -17,8 +17,10 @@ jobs:
       - uses: actions/checkout@v4
 
       # Run the pinned gitleaks binary directly (same version as the
-      # .pre-commit-config.yaml hook). This avoids the gitleaks-action's
-      # organization-license requirement and keeps the output transparent.
+      # .pre-commit-config.yaml hook). Unlike gitleaks-action, this makes no
+      # GitHub API calls, so it needs no extra token permissions (the action
+      # 403'd listing PR commits without pull-requests:read) and keeps the
+      # output transparent.
       - name: Run gitleaks
         run: |
           docker run --rm -v "$PWD:/repo" -w /repo \
