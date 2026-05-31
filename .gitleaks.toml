@@ -1,0 +1,21 @@
+# gitleaks configuration for infra-shelf.
+# Keeps the full set of built-in rules and only narrows known false positives.
+title = "infra-shelf"
+
+[extend]
+# IMPORTANT: inherit all of gitleaks' default rules. Without this, only the
+# rules defined below would run — which would silently disable secret scanning.
+useDefault = true
+
+[allowlist]
+description = "Documented placeholders and gitignored local runtime state (never committed)"
+# These paths are gitignored (except .env.example, which ships obvious local-dev
+# placeholders). They only appear in a developer's working tree, never in the
+# repository, so scanning a clean CI checkout never sees them — this keeps a
+# local `gitleaks dir` run quiet too.
+paths = [
+  '''(^|/)\.env(\.example)?$''',
+  '''(^|/)data/''',
+  '''(^|/)backups/''',
+  '''(^|/)apps\.json$''',
+]
