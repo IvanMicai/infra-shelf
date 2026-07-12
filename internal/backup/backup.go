@@ -118,6 +118,54 @@ func ListForApp(dir, app string) ([]File, error) {
 	return filtered, nil
 }
 
+// Filter returns the files matching the given app and service. An empty app or
+// service means "no constraint" on that dimension; passing both empty returns
+// every file. Order is preserved.
+func Filter(files []File, app, service string) []File {
+	filtered := make([]File, 0, len(files))
+	for _, file := range files {
+		if app != "" && file.App != app {
+			continue
+		}
+		if service != "" && file.Service != service {
+			continue
+		}
+		filtered = append(filtered, file)
+	}
+	return filtered
+}
+
+// Apps returns the distinct app names present in files, sorted alphabetically.
+func Apps(files []File) []string {
+	seen := make(map[string]struct{}, len(files))
+	apps := make([]string, 0)
+	for _, file := range files {
+		if _, ok := seen[file.App]; ok {
+			continue
+		}
+		seen[file.App] = struct{}{}
+		apps = append(apps, file.App)
+	}
+	sort.Strings(apps)
+	return apps
+}
+
+// Services returns the distinct service keys present in files, sorted
+// alphabetically. Human-readable labels are applied at the template layer.
+func Services(files []File) []string {
+	seen := make(map[string]struct{}, len(files))
+	services := make([]string, 0)
+	for _, file := range files {
+		if _, ok := seen[file.Service]; ok {
+			continue
+		}
+		seen[file.Service] = struct{}{}
+		services = append(services, file.Service)
+	}
+	sort.Strings(services)
+	return services
+}
+
 func Prune(dir string, options PruneOptions) ([]File, error) {
 	if options.KeepDays <= 0 && options.KeepCount <= 0 {
 		return nil, nil
