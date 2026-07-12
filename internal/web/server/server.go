@@ -51,10 +51,13 @@ type PageData struct {
 	Statuses      []docker.Status
 	Schedules     []scheduler.Schedule
 	Runs          []scheduler.Run
-	SelectedApp   string
-	SelectedFile  string
-	BackupCount   int
-	ScheduleCount int
+	SelectedApp     string
+	SelectedFile    string
+	SelectedService string
+	BackupApps      []string
+	BackupServices  []string
+	BackupCount     int
+	ScheduleCount   int
 	S3Enabled     bool
 	S3Destination string
 }
@@ -379,19 +382,20 @@ func (s *Server) removeApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) backupsPage(w http.ResponseWriter, r *http.Request) {
-	apps, err := s.registry.ListApps()
+	all, err := backup.List(s.cfg.BackupsDir)
 	if err != nil {
 		s.renderError(w, err)
 		return
 	}
-	backups, err := backup.List(s.cfg.BackupsDir)
-	if err != nil {
-		s.renderError(w, err)
-		return
-	}
+	appFilter := strings.TrimSpace(r.URL.Query().Get("app"))
+	serviceFilter := strings.TrimSpace(r.URL.Query().Get("service"))
+
 	data := s.page(r, "Backups", "backups")
-	data.Apps = apps
-	data.Backups = backups
+	data.Backups = backup.Filter(all, appFilter, serviceFilter)
+	data.BackupApps = backup.Apps(all)
+	data.BackupServices = backup.Services(all)
+	data.SelectedApp = appFilter
+	data.SelectedService = serviceFilter
 	s.render(w, "backups.html", data)
 }
 

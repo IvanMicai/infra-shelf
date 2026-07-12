@@ -301,6 +301,24 @@ tr:last-child td {
   flex-wrap: wrap;
 }
 
+.filter-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-form label {
+  gap: 4px;
+  font-size: 12px;
+}
+
+.filter-form select {
+  width: auto;
+  min-width: 150px;
+  padding: 8px 10px;
+}
+
 label,
 fieldset {
   display: grid;

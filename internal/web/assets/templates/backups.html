@@ -41,6 +41,23 @@
 <section class="panel">
   <div class="panel-header">
     <h2>Backup files</h2>
+    <form method="get" action="/backups" class="filter-form">
+      <label>
+        App
+        <select name="app" onchange="this.form.submit()">
+          <option value="">All apps</option>
+          {{range .BackupApps}}<option value="{{.}}"{{if eq . $.SelectedApp}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>
+        Service
+        <select name="service" onchange="this.form.submit()">
+          <option value="">All services</option>
+          {{range .BackupServices}}<option value="{{.}}"{{if eq . $.SelectedService}} selected{{end}}>{{serviceLabel .}}</option>{{end}}
+        </select>
+      </label>
+      {{if or .SelectedApp .SelectedService}}<a class="button small" href="/backups">Clear</a>{{end}}
+    </form>
   </div>
   <table>
     <thead>

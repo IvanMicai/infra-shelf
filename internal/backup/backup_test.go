@@ -3,6 +3,7 @@ package backup
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -21,6 +22,65 @@ func TestDetectService(t *testing.T) {
 		if got := DetectService(name); got != want {
 			t.Errorf("DetectService(%q) = %q, want %q", name, got, want)
 		}
+	}
+}
+
+func sampleFiles() []File {
+	return []File{
+		{App: "web", Service: "postgres", Name: "postgres_1.sql"},
+		{App: "web", Service: "redis", Name: "redis_1.json"},
+		{App: "api", Service: "postgres", Name: "postgres_2.sql"},
+		{App: "api", Service: "mongodb", Name: "mongodb_1.archive"},
+	}
+}
+
+func TestFilter(t *testing.T) {
+	files := sampleFiles()
+	cases := []struct {
+		name    string
+		app     string
+		service string
+		want    []string // expected file names
+	}{
+		{"no constraint", "", "", []string{"postgres_1.sql", "redis_1.json", "postgres_2.sql", "mongodb_1.archive"}},
+		{"app only", "web", "", []string{"postgres_1.sql", "redis_1.json"}},
+		{"service only", "", "postgres", []string{"postgres_1.sql", "postgres_2.sql"}},
+		{"app and service", "api", "postgres", []string{"postgres_2.sql"}},
+		{"no match", "api", "redis", []string{}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Filter(files, tc.app, tc.service)
+			names := make([]string, 0, len(got))
+			for _, f := range got {
+				names = append(names, f.Name)
+			}
+			if !reflect.DeepEqual(names, tc.want) {
+				t.Errorf("Filter(%q, %q) names = %v, want %v", tc.app, tc.service, names, tc.want)
+			}
+		})
+	}
+}
+
+func TestApps(t *testing.T) {
+	got := Apps(sampleFiles())
+	want := []string{"api", "web"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Apps() = %v, want %v", got, want)
+	}
+	if got := Apps(nil); len(got) != 0 {
+		t.Errorf("Apps(nil) = %v, want empty", got)
+	}
+}
+
+func TestServices(t *testing.T) {
+	got := Services(sampleFiles())
+	want := []string{"mongodb", "postgres", "redis"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Services() = %v, want %v", got, want)
+	}
+	if got := Services(nil); len(got) != 0 {
+		t.Errorf("Services(nil) = %v, want empty", got)
 	}
 }
 
