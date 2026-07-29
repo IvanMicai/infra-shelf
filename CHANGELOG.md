@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1](https://github.com/IvanMicai/infra-shelf/compare/v0.2.0...v0.2.1) (2026-07-29)
+
+### Bug Fixes
+
+* **docs:** give the logo real transparency and clarify the S3 image ([c847d75](https://github.com/IvanMicai/infra-shelf/commit/c847d756a26ad699d57d71455d7522e73709cf7b))
+
 ## [0.2.0](https://github.com/IvanMicai/infra-shelf/compare/v0.1.0...v0.2.0) (2026-07-29)
 
 ### Features
