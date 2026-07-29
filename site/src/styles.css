@@ -88,38 +88,14 @@ kbd {
   outline-offset: 3px;
 }
 
-/* ── Brand mark: a shelf board carrying two units ─────────── */
+/* ── Brand mark ───────────────────────────────────────────── */
 
+/* The logo is docs/assets/logo.svg, copied into dist/assets by the build so
+   the README and the site share one definition. */
 .brand__mark {
-  position: relative;
-  display: inline-block;
-  width: 1.15rem;
-  height: 1.15rem;
+  display: block;
   flex: none;
-  vertical-align: -0.18rem;
-}
-.brand__mark::before {
-  /* the two units standing on the board */
-  content: "";
-  position: absolute;
-  left: 0.1rem;
-  right: 0.1rem;
-  top: 0.16rem;
-  bottom: 0.42rem;
-  background:
-    linear-gradient(var(--pg) 0 0) 0 100% / 0.26rem 78% no-repeat,
-    linear-gradient(var(--rabbit) 0 0) 0.42rem 100% / 0.26rem 55% no-repeat,
-    linear-gradient(var(--mongo) 0 0) 0.84rem 100% / 0.26rem 92% no-repeat;
-}
-.brand__mark::after {
-  /* the board */
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0.24rem;
-  height: 0.16rem;
-  background: currentColor;
+  border-radius: 4px;
 }
 
 /* ── Masthead ─────────────────────────────────────────────── */

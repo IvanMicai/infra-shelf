@@ -19,6 +19,9 @@ const REPO = "https://github.com/IvanMicai/infra-shelf";
 const BLOB = `${REPO}/blob/main`;
 const HUB = "https://hub.docker.com/r/ivanmicai/infra-shelf";
 
+/** Repo files copied into dist/assets. Keeps one definition of the logo. */
+const ASSETS = [["docs/assets/logo.svg", "logo.svg"]];
+
 /** Docs pages, in sidebar order. `src` is relative to the repository root. */
 const PAGES = [
   { slug: "index", title: "Overview", src: "docs/README.md" },
@@ -121,6 +124,7 @@ function shell({ title, description, nav, body, editPath }) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title} — infra-shelf</title>
     <meta name="description" content="${description}" />
+    <link rel="icon" href="../assets/logo.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -134,7 +138,7 @@ function shell({ title, description, nav, body, editPath }) {
     <header class="masthead">
       <div class="masthead__inner">
         <a class="brand" href="../">
-          <span class="brand__mark" aria-hidden="true"></span>
+          <img class="brand__mark" src="../assets/logo.svg" alt="" width="22" height="22" />
           <span class="brand__name">infra-shelf</span>
         </a>
         <nav aria-label="Primary">
@@ -207,10 +211,15 @@ function firstParagraph(md) {
 async function build() {
   await rm(DIST, { recursive: true, force: true });
   await mkdir(path.join(DIST, "docs"), { recursive: true });
+  await mkdir(path.join(DIST, "assets"), { recursive: true });
 
   // Landing page + stylesheet.
   await cp(path.join(SRC, "index.html"), path.join(DIST, "index.html"));
   await cp(path.join(SRC, "styles.css"), path.join(DIST, "styles.css"));
+
+  for (const [from, to] of ASSETS) {
+    await cp(path.join(ROOT, from), path.join(DIST, "assets", to));
+  }
 
   for (const page of PAGES) {
     const abs = path.join(ROOT, page.src);
