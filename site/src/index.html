@@ -122,6 +122,11 @@ REDIS_URL=<span class="s">redis://billing:•••@redis:6379</span></code></pr
             No project holds another&rsquo;s credentials, and no project holds a
             superuser.
           </p>
+          <p class="fineprint">
+            The S3 service is always named <code>aistor</code>, whichever image
+            backs it: open-source MinIO by default, or the commercial AIStor
+            build by swapping <code>S3_IMAGE</code>.
+          </p>
 
           <div class="tablewrap">
             <table class="matrix">
@@ -154,7 +159,7 @@ REDIS_URL=<span class="s">redis://billing:•••@redis:6379</span></code></pr
                   <td>Dedicated database and user</td>
                 </tr>
                 <tr style="--svc: var(--s3)">
-                  <th scope="row">S3 — MinIO or AIStor</th>
+                  <th scope="row">S3</th>
                   <td><code>aistor:9000</code></td>
                   <td>Dedicated bucket and access key</td>
                 </tr>

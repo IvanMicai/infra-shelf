@@ -88,8 +88,11 @@ docker run --rm \
 | Redis | `redis:6379` | ACL user + key prefix |
 | RabbitMQ | `rabbitmq:5672` | Dedicated vhost + user |
 | MongoDB | `mongodb:27017` | Dedicated database + user |
-| S3 (MinIO/AIStor) | `aistor:9000` | Dedicated bucket + access key |
+| S3 | `aistor:9000` | Dedicated bucket + access key |
 | SignOz | `signoz-otel-collector:4317/4318` | `service.name` + attributes |
+
+The S3 service is always named `aistor`, whichever image backs it: open-source
+MinIO by default, or the commercial AIStor build by swapping `S3_IMAGE`.
 
 ## Configuration
 
