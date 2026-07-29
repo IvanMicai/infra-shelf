@@ -95,6 +95,9 @@ services:
 
   # ─── Web app ───────────────────────────────────────────────
   app:
+    # Published multi-arch image (linux/amd64, linux/arm64). Pin a release with
+    # IMAGE_TAG in .env; `make app` still rebuilds from source locally.
+    image: ${DOCKERHUB_NAMESPACE:-ivanmicai}/infra-shelf:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -140,10 +143,10 @@ services:
   # healthy, executes the shelf binary from the same image as the app, then
   # exits. Idempotent — a no-op when everything is already consistent.
   reconcile:
+    image: ${DOCKERHUB_NAMESPACE:-ivanmicai}/infra-shelf:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
-    image: infra-shelf-app
     container_name: infra-shelf-reconcile
     depends_on:
       postgres:

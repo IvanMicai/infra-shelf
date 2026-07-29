@@ -1,8 +1,8 @@
 name: CI
 
+# Pushes to main are validated by the `validate` job in release.yml, which gates
+# publishing — running the same checks here too would just duplicate them.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
