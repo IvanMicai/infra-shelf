@@ -73,8 +73,13 @@ it any time with `./shelf credentials myapp`.
 | Redis | `redis:6379` | ACL user + key prefix | core (`make up`) |
 | RabbitMQ | `rabbitmq:5672` | Dedicated vhost + user | core (`make up`) |
 | MongoDB | `mongodb:27017` | Dedicated database + user | core (`make up`) |
-| S3 (MinIO/AIStor) | `aistor:9000` | Dedicated bucket + access key | opt-in (`make s3-up`) |
+| S3 | `aistor:9000` | Dedicated bucket + access key | opt-in (`make s3-up`) |
 | SignOz | `signoz-otel-collector:4317/4318` | `service.name` + attributes | opt-in (`make signoz-up`) |
+
+The S3 service is always named `aistor`, whichever image backs it: it runs
+open-source **MinIO** by default, and swapping `S3_IMAGE` in `.env` to
+`quay.io/minio/aistor/minio:latest` runs the commercial **AIStor** build instead
+(that one needs a license — see `AISTOR_LICENSE` in `.env.example`).
 
 ## Features
 
