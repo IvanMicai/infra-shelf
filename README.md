@@ -133,11 +133,11 @@ you can skip the local build:
 docker compose pull app && docker compose up -d app
 ```
 
-Pin a version instead of tracking `latest` by setting `INFRA_SHELF_IMAGE` in
-`.env`:
+Every release publishes `X.Y.Z`, `X.Y`, `X`, and `latest`. Pin an exact release
+instead of tracking `latest` by setting `IMAGE_TAG` in `.env`:
 
 ```bash
-INFRA_SHELF_IMAGE=ivanmicai/infra-shelf:0.1.0
+IMAGE_TAG=0.2.0
 ```
 
 The image expects the repository mounted at `/workspace` (compose does this) and
@@ -150,6 +150,9 @@ docker compose exec app shelf list
 
 `make app` still builds from source locally, overwriting the tag in your local
 image store — use it when you want your working tree, not the published build.
+
+Releases are cut automatically from Conventional Commits merged into `main` →
+**[docs/RELEASING.md](docs/RELEASING.md)**.
 
 ## Connecting other projects
 
