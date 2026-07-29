@@ -196,6 +196,8 @@ See [SECURITY.md](SECURITY.md) for the full posture and how to report issues.
 
 ## Documentation
 
+Browse it at **<https://ivanmicai.github.io/infra-shelf/>**, or read it here:
+
 | Doc | Contents |
 | --- | --- |
 | [docs/CLI.md](docs/CLI.md) | Every `shelf` command and flag |
@@ -204,6 +206,8 @@ See [SECURITY.md](SECURITY.md) for the full posture and how to report issues.
 | [docs/BACKUPS.md](docs/BACKUPS.md) | Backups, restore, retention, S3 upload |
 | [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | The opt-in SignOz stack |
 | [docs/ADDING-A-SERVICE.md](docs/ADDING-A-SERVICE.md) | Recipe for a new backing service |
+| [docs/DOCKERHUB.md](docs/DOCKERHUB.md) | The published image — tags, mounts, configuration |
+| [docs/RELEASING.md](docs/RELEASING.md) | How releases and image publishing work |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, PR & commit conventions |
 
 **Installing with an AI agent?** infra-shelf ships a Claude Code skill at

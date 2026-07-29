@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>infra-shelf — one shelf, every project</title>
+    <meta
+      name="description"
+      content="Shared local development infrastructure: PostgreSQL, Redis, RabbitMQ, MongoDB, S3 and SignOz on one Docker network, with per-app isolated credentials."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="masthead">
+      <div class="masthead__inner">
+        <a class="brand" href="./">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="brand__name">infra-shelf</span>
+        </a>
+        <nav aria-label="Primary">
+          <a href="./docs/">Docs</a>
+          <a href="#quick-start">Quick start</a>
+          <a href="https://github.com/IvanMicai/infra-shelf">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ── Hero ─────────────────────────────────────────────── -->
+      <section class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow">Local development infrastructure</p>
+          <h1>One shelf.<br />Every project.</h1>
+          <p class="lede">
+            Stop running a Postgres per repository. Start the services once —
+            every project on your machine reaches them by hostname, holding its
+            own database, user and generated password.
+          </p>
+          <div class="cta">
+            <a class="btn btn--solid" href="#quick-start">Quick start</a>
+            <a class="btn" href="./docs/">Read the docs</a>
+          </div>
+        </div>
+
+        <!-- The signature: projects resting on a shared shelf. Each unit is
+             colour-coded by service; colour identifies a service and never
+             decorates. -->
+        <figure class="rig" aria-labelledby="rig-cap">
+          <div class="rig__projects">
+            <span class="chip" style="--i: 0">api</span>
+            <span class="chip" style="--i: 1">dashboard</span>
+            <span class="chip" style="--i: 2">worker</span>
+          </div>
+
+          <div class="rig__wires" aria-hidden="true">
+            <i style="--i: 0"></i><i style="--i: 1"></i><i style="--i: 2"></i>
+          </div>
+
+          <div class="shelf">
+            <p class="shelf__net"><code>network: infra-shelf</code></p>
+            <ul class="shelf__units">
+              <li style="--svc: var(--pg)"><b>postgres</b><span>:5432</span></li>
+              <li style="--svc: var(--redis)"><b>redis</b><span>:6379</span></li>
+              <li style="--svc: var(--rabbit)"><b>rabbitmq</b><span>:5672</span></li>
+              <li style="--svc: var(--mongo)"><b>mongodb</b><span>:27017</span></li>
+              <li style="--svc: var(--s3)"><b>aistor</b><span>:9000</span></li>
+              <li style="--svc: var(--signoz)"><b>signoz</b><span>:4317</span></li>
+            </ul>
+          </div>
+          <figcaption id="rig-cap">
+            Three projects, one shelf. The last two units are opt-in.
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- ── The payoff ───────────────────────────────────────── -->
+      <section class="band">
+        <div class="band__inner split">
+          <div>
+            <h2>One command per project</h2>
+            <p>
+              <code>shelf setup</code> creates the database, the user, the vhost
+              and the bucket, generates a password for each, records them in the
+              registry, and prints a block you paste straight into the
+              project&rsquo;s <code>.env</code>.
+            </p>
+            <p>
+              Reprint it any time with
+              <code>shelf credentials &lt;app&gt;</code>. Nothing is stored in
+              your shell history.
+            </p>
+          </div>
+
+          <div class="term" role="img" aria-label="Terminal: shelf setup billing prints a paste-ready env block">
+            <div class="term__bar"><span></span><span></span><span></span></div>
+            <pre><code><span class="p">$</span> shelf setup <em>billing</em> -s postgres,redis
+
+<span class="ok">✓</span> postgres  database <em>billing</em>, user <em>billing</em>
+<span class="ok">✓</span> redis     ACL user <em>billing</em>, prefix <em>billing:</em>
+
+<span class="c"># paste into billing/.env</span>
+DATABASE_URL=<span class="s">postgres://billing:•••@postgres:5432/billing</span>
+REDIS_URL=<span class="s">redis://billing:•••@redis:6379</span></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Isolation ────────────────────────────────────────── -->
+      <section class="band band--alt">
+        <div class="band__inner">
+          <h2>Every app is walled off</h2>
+          <p class="section-lede">
+            No project holds another&rsquo;s credentials, and no project holds a
+            superuser.
+          </p>
+
+          <div class="tablewrap">
+            <table class="matrix">
+              <thead>
+                <tr>
+                  <th scope="col">Service</th>
+                  <th scope="col">Reached at</th>
+                  <th scope="col">What an app gets</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="--svc: var(--pg)">
+                  <th scope="row">PostgreSQL</th>
+                  <td><code>postgres:5432</code></td>
+                  <td>Dedicated database and user</td>
+                </tr>
+                <tr style="--svc: var(--redis)">
+                  <th scope="row">Redis</th>
+                  <td><code>redis:6379</code></td>
+                  <td>ACL user, restricted to its key prefix</td>
+                </tr>
+                <tr style="--svc: var(--rabbit)">
+                  <th scope="row">RabbitMQ</th>
+                  <td><code>rabbitmq:5672</code></td>
+                  <td>Dedicated vhost and user</td>
+                </tr>
+                <tr style="--svc: var(--mongo)">
+                  <th scope="row">MongoDB</th>
+                  <td><code>mongodb:27017</code></td>
+                  <td>Dedicated database and user</td>
+                </tr>
+                <tr style="--svc: var(--s3)">
+                  <th scope="row">S3 — MinIO or AIStor</th>
+                  <td><code>aistor:9000</code></td>
+                  <td>Dedicated bucket and access key</td>
+                </tr>
+                <tr style="--svc: var(--signoz)">
+                  <th scope="row">SignOz</th>
+                  <td><code>signoz-otel-collector:4317</code></td>
+                  <td>Its own <code>service.name</code> and attributes</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Quick start ──────────────────────────────────────── -->
+      <section class="band" id="quick-start">
+        <div class="band__inner">
+          <h2>Quick start</h2>
+          <p class="section-lede">
+            One command clones the repository, builds the binaries and starts the
+            core stack. No Go toolchain? It builds inside Docker instead.
+          </p>
+
+          <div class="term term--wide">
+            <div class="term__bar"><span></span><span></span><span></span></div>
+            <pre><code><span class="p">$</span> curl -fsSL https://raw.githubusercontent.com/IvanMicai/infra-shelf/main/scripts/install.sh | bash</code></pre>
+          </div>
+
+          <p class="or">or, already cloned</p>
+
+          <div class="term term--wide">
+            <div class="term__bar"><span></span><span></span><span></span></div>
+            <pre><code><span class="p">$</span> make quickstart   <span class="c"># init + build + up</span>
+<span class="p">$</span> ./shelf setup myapp -s postgres,redis,rabbitmq,mongodb</code></pre>
+          </div>
+
+          <p class="fineprint">
+            Change the default passwords in <code>.env</code> before exposing
+            anything beyond your machine — see the
+            <a href="https://github.com/IvanMicai/infra-shelf/blob/main/SECURITY.md">security policy</a>.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── Where next ───────────────────────────────────────── -->
+      <section class="band band--alt">
+        <div class="band__inner">
+          <h2>Where to go next</h2>
+          <ul class="cards">
+            <li>
+              <a href="./docs/cli.html">
+                <h3>CLI reference</h3>
+                <p>Every <code>shelf</code> command and flag.</p>
+              </a>
+            </li>
+            <li>
+              <a href="./docs/backups.html">
+                <h3>Backups &amp; restore</h3>
+                <p>Retention, scheduling and upload to any S3-compatible store.</p>
+              </a>
+            </li>
+            <li>
+              <a href="./docs/architecture.html">
+                <h3>Architecture</h3>
+                <p>How the pieces fit, and why they fit that way.</p>
+              </a>
+            </li>
+            <li>
+              <a href="./docs/docker.html">
+                <h3>Docker image</h3>
+                <p><code>ivanmicai/infra-shelf</code>, amd64 and arm64.</p>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="foot__inner">
+        <p>
+          <span class="brand__mark" aria-hidden="true"></span>
+          infra-shelf — MIT licensed
+        </p>
+        <nav aria-label="Footer">
+          <a href="https://github.com/IvanMicai/infra-shelf">GitHub</a>
+          <a href="https://hub.docker.com/r/ivanmicai/infra-shelf">Docker Hub</a>
+          <a href="./docs/">Docs</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>
