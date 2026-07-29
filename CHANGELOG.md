@@ -8,6 +8,10 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Published Docker image [`ivanmicai/infra-shelf`](https://hub.docker.com/r/ivanmicai/infra-shelf)
+  for `linux/amd64` and `linux/arm64`, wired into the `app` compose service
+  (override the tag with `INFRA_SHELF_IMAGE`), plus a `docker-publish` workflow
+  that builds and pushes it on `v*` tags or manual dispatch.
 - One-command installer (`scripts/install.sh`) that clones, builds (host Go or a
   throwaway Docker build when Go is absent), and starts the core stack; plus a
   `make quickstart` target.
@@ -19,6 +23,12 @@ follows [Semantic Versioning](https://semver.org/).
   trimmed, scannable README that links into it.
 - Claude Code install skill (`.claude/skills/infra-shelf-install/`) and an
   `AGENTS.md` guide so an AI agent can install and wire infra-shelf into a project.
+
+### Changed
+
+- The Docker build now cross-compiles from the build platform (`$BUILDPLATFORM`)
+  instead of running the Go toolchain under emulation, so multi-arch builds no
+  longer need QEMU.
 
 ## [0.1.0] - 2026-05-28
 

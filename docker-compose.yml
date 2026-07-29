@@ -95,6 +95,9 @@ services:
 
   # ─── Web app ───────────────────────────────────────────────
   app:
+    # Published multi-arch image (linux/amd64, linux/arm64). Pin a version with
+    # INFRA_SHELF_IMAGE in .env; `make app` still rebuilds from source locally.
+    image: ${INFRA_SHELF_IMAGE:-ivanmicai/infra-shelf:latest}
     build:
       context: .
       dockerfile: Dockerfile

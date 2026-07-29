@@ -122,6 +122,35 @@ Listens on `http://127.0.0.1:8080` with Basic Auth `admin` / `admin` by default.
 Credentials stay hidden until you click **Reveal credentials**. **Change
 `APP_USERNAME` / `APP_PASSWORD` before exposing it beyond your machine.**
 
+### Published image
+
+The web UI (and the `shelf` CLI, in the same image) is published to Docker Hub as
+[`ivanmicai/infra-shelf`](https://hub.docker.com/r/ivanmicai/infra-shelf), built
+for `linux/amd64` and `linux/arm64`. The `app` service already points at it, so
+you can skip the local build:
+
+```bash
+docker compose pull app && docker compose up -d app
+```
+
+Pin a version instead of tracking `latest` by setting `INFRA_SHELF_IMAGE` in
+`.env`:
+
+```bash
+INFRA_SHELF_IMAGE=ivanmicai/infra-shelf:0.1.0
+```
+
+The image expects the repository mounted at `/workspace` (compose does this) and
+the Docker socket, since it drives the sibling containers. The CLI ships in the
+same image:
+
+```bash
+docker compose exec app shelf list
+```
+
+`make app` still builds from source locally, overwriting the tag in your local
+image store — use it when you want your working tree, not the published build.
+
 ## Connecting other projects
 
 In your project's `docker-compose.yml`, join the external `infra-shelf` network
