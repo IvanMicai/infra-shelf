@@ -9,11 +9,13 @@ Start with the [project README](../README.md) and its Quick Start.
 - **[Configuration](CONFIGURATION.md)** — full environment-variable reference.
 - **[Backups & restore](BACKUPS.md)** — local backups, retention, S3 upload.
 - **[Observability](OBSERVABILITY.md)** — the opt-in SignOz stack.
+- **[Docker image](DOCKERHUB.md)** — published tags, required mounts, environment.
 
 ## Contributing
 
 - **[Architecture](ARCHITECTURE.md)** — how the pieces fit and *why*; read this first.
 - **[Adding a service](ADDING-A-SERVICE.md)** — the step-by-step recipe.
+- **[Releasing](RELEASING.md)** — how a merge becomes a version and an image.
 - **[CONTRIBUTING](../CONTRIBUTING.md)** — dev setup, PR and commit conventions.
 
 ## Project meta

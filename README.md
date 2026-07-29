@@ -1,15 +1,19 @@
 <div align="center">
 
+  <img src="docs/assets/logo.png" width="88" alt="" />
+
   <h1>infra-shelf</h1>
 
   <p>One shared Docker Compose stack for all your local-dev projects — PostgreSQL, Redis, RabbitMQ, MongoDB, optional S3 storage and SignOz observability — with a Go CLI and web UI that provision <strong>isolated per-app credentials</strong>.</p>
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
-    <a href="https://github.com/IvanMicai/infra-shelf/actions/workflows/ci.yml"><img src="https://github.com/IvanMicai/infra-shelf/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/IvanMicai/infra-shelf/actions/workflows/release.yml"><img src="https://github.com/IvanMicai/infra-shelf/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+    <a href="https://hub.docker.com/r/ivanmicai/infra-shelf"><img src="https://img.shields.io/docker/v/ivanmicai/infra-shelf?logo=docker&logoColor=white&label=image" alt="Docker Hub image version" /></a>
     <img src="https://img.shields.io/badge/Go-1.25%2B-00ADD8?logo=go&logoColor=white" alt="Go 1.25+" />
-    <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose" />
   </p>
+
+  <p><a href="https://ivanmicai.github.io/infra-shelf/"><strong>Documentation</strong></a></p>
 
 </div>
 
@@ -196,6 +200,8 @@ See [SECURITY.md](SECURITY.md) for the full posture and how to report issues.
 
 ## Documentation
 
+Browse it at **<https://ivanmicai.github.io/infra-shelf/>**, or read it here:
+
 | Doc | Contents |
 | --- | --- |
 | [docs/CLI.md](docs/CLI.md) | Every `shelf` command and flag |
@@ -204,6 +210,8 @@ See [SECURITY.md](SECURITY.md) for the full posture and how to report issues.
 | [docs/BACKUPS.md](docs/BACKUPS.md) | Backups, restore, retention, S3 upload |
 | [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | The opt-in SignOz stack |
 | [docs/ADDING-A-SERVICE.md](docs/ADDING-A-SERVICE.md) | Recipe for a new backing service |
+| [docs/DOCKERHUB.md](docs/DOCKERHUB.md) | The published image — tags, mounts, configuration |
+| [docs/RELEASING.md](docs/RELEASING.md) | How releases and image publishing work |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, PR & commit conventions |
 
 **Installing with an AI agent?** infra-shelf ships a Claude Code skill at

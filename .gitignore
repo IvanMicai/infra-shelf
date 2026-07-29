@@ -14,6 +14,10 @@ backups/
 /shelf
 /shelf-web
 
+# Pages site build output and deps
+site/node_modules/
+site/dist/
+
 # OS
 .DS_Store
 Thumbs.db
