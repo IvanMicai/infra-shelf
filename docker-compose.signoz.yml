@@ -132,10 +132,31 @@ services:
     image: signoz/signoz-otel-collector:v0.144.4
     container_name: infra-signoz-otel-collector
     restart: unless-stopped
+    # `depends_on` only orders `compose up`. When the Docker daemon restarts (a
+    # host reboot, a dockerd upgrade) the restart policy brings every container
+    # back at once and this ordering does not apply — the collector can then win
+    # the race against ClickHouse and fail its pipeline build with
+    # `clickhouselogsexporter ... connect: connection refused`. It does not
+    # crash: the OpAMP layer falls back to a config whose pipelines are all
+    # `nop`, so the process keeps running, still logs "Everything is ready", and
+    # listens on nothing. Every producer then gets `connection refused` on 4317
+    # until somebody notices. A plain `docker restart` does NOT recover it — the
+    # fallback is persisted in the `--copy-path` file, which lives in the
+    # container's writable layer and survives a restart.
+    #
+    # So we block on ClickHouse's native port before exec'ing the collector,
+    # whatever started us. bash ships in the image; `/dev/tcp` needs no nc/curl.
+    entrypoint: ["/bin/bash", "-c"]
     command:
-      - --config=/etc/otel-collector-config.yaml
-      - --manager-config=/etc/manager-config.yaml
-      - --copy-path=/var/tmp/collector-config.yaml
+      - |
+        until (exec 3<>/dev/tcp/signoz-clickhouse/9000) 2>/dev/null; do
+          echo "waiting for signoz-clickhouse:9000"
+          sleep 2
+        done
+        exec /signoz-otel-collector \
+          --config=/etc/otel-collector-config.yaml \
+          --manager-config=/etc/manager-config.yaml \
+          --copy-path=/var/tmp/collector-config.yaml
     depends_on:
       signoz-clickhouse:
         condition: service_healthy
@@ -167,6 +188,19 @@ services:
     ports:
       - "${SIGNOZ_OTLP_GRPC_PORT:-4317}:4317"
       - "${SIGNOZ_OTLP_HTTP_PORT:-4318}:4318"
+    # The log line "Everything is ready. Begin running and processing data." is
+    # not proof of anything — the collector prints it for the all-`nop` fallback
+    # too. The only honest probe is the OTLP port itself, so a collector that is
+    # running but deaf shows up as `unhealthy` in `docker ps` instead of dropping
+    # telemetry in silence. Probing 4318 rather than 4317 on purpose: one `otlp`
+    # receiver binds both, and a bare connect-and-close is silent against an HTTP
+    # listener where the gRPC one would log a missing-preface error every 30s.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/4318"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     networks:
       - infra
 
