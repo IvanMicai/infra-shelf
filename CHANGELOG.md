@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2](https://github.com/IvanMicai/infra-shelf/compare/v0.2.1...v0.2.2) (2026-09-02)
+
+### Bug Fixes
+
+* **signoz:** stop the collector from silently serving a nop config ([#30](https://github.com/IvanMicai/infra-shelf/issues/30)) ([9c4fc32](https://github.com/IvanMicai/infra-shelf/commit/9c4fc32f235d4ac91bcfd9fb3fe690beac00000a))
+
 ## [0.2.1](https://github.com/IvanMicai/infra-shelf/compare/v0.2.0...v0.2.1) (2026-07-29)
 
 ### Bug Fixes
