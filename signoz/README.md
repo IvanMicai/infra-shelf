@@ -55,7 +55,26 @@ current stack tracks the SignOz v0.124 community build.
 ## Troubleshooting
 
 - **Empty UI / "no data"**: check `make signoz-logs` — the collector should print
-  `Everything is ready. Begin running and processing data.`
+  `Everything is ready. Begin running and processing data.` Note that this line
+  alone is **not** proof: the collector prints it for the degraded config too
+  (see below). The conclusive check is that it is listening —
+  `docker exec infra-signoz-otel-collector bash -c 'exec 3<>/dev/tcp/127.0.0.1/4318'`
+  (silence = ok), or just `docker ps`, since the healthcheck runs exactly that.
+- **Every producer gets `connection refused` on 4317, and the collector looks
+  healthy**: it is running the all-`nop` fallback. The collector adopts it when a
+  pipeline fails to build — typically because ClickHouse was not up yet when it
+  started, which `depends_on` does not prevent after a Docker daemon restart.
+  It then serves no OTLP listener at all and logs nothing further.
+  **A `docker restart` does not fix this**: the fallback is persisted in the
+  `--copy-path` file, which survives a restart. Recreate the container instead:
+
+  ```bash
+  docker compose -f docker-compose.yml -f docker-compose.signoz.yml \
+    up -d --force-recreate --no-deps signoz-otel-collector
+  ```
+
+  The wait-for-ClickHouse guard in `docker-compose.signoz.yml` keeps it from
+  happening again; the healthcheck makes it visible if it ever does.
 - **App missing from Services**: confirm the app's endpoint is
   `http://signoz-otel-collector:4317` (on the `infra-shelf` network) or
   `http://localhost:4317` (from outside). `OTEL_SERVICE_NAME` must be set.
